@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>研发供应商资源平台 · 原型 v1</title>
+<style>
+:root{
+  --bg:#f5f7fa; --panel:#fff; --bd:#e3e8ef; --bd2:#eef2f7;
+  --tx:#0f172a; --tx2:#475569; --mut:#94a3b8;
+  --pri:#1e5eff; --pri-l:#eaf1ff;
+  --ok:#0d9488; --ok-l:#e6f7f5;
+  --wn:#d97706; --wn-l:#fef6e7;
+  --er:#dc2626; --er-l:#feecec;
+  --gr:#64748b; --gr-l:#f1f5f9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Microsoft YaHei","PingFang SC",-apple-system,sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.6}
+.app{display:flex;min-height:100vh}
+/* 侧栏 */
+.sb{width:216px;background:#0f172a;color:#cbd5e1;flex:0 0 216px;display:flex;flex-direction:column;position:fixed;height:100vh;z-index:20}
+.sb-h{padding:18px 18px 14px;border-bottom:1px solid #1e293b}
+.sb-h h1{font-size:15px;color:#fff;font-weight:600;letter-spacing:.5px}
+.sb-h span{font-size:10px;color:#64748b;letter-spacing:.3px}
+.sb nav{padding:10px 8px;flex:1}
+.sb nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:7px;cursor:pointer;
+  color:#cbd5e1;font-size:13px;margin-bottom:2px;transition:.15s}
+.sb nav a:hover{background:#1e293b;color:#fff}
+.sb nav a.on{background:var(--pri);color:#fff;font-weight:500}
+.sb nav a b{margin-left:auto;background:#334155;color:#cbd5e1;border-radius:9px;padding:0 7px;font-size:11px;font-weight:500}
+.sb nav a.on b{background:rgba(255,255,255,.22);color:#fff}
+.sb nav a i{font-style:normal;width:16px;text-align:center;opacity:.85}
+.sb-f{padding:12px 16px;border-top:1px solid #1e293b;font-size:11px;color:#64748b;line-height:1.7}
+.sb-f b{color:#94a3b8;font-weight:500}
+/* 主区 */
+.mn{flex:1;margin-left:216px;display:flex;flex-direction:column}
+.tb{height:56px;background:var(--panel);border-bottom:1px solid var(--bd);display:flex;align-items:center;
+  padding:0 22px;position:sticky;top:0;z-index:10}
+.tb h2{font-size:16px;font-weight:600}
+.tb .crumb{font-size:12px;color:var(--mut);margin-left:10px;padding-left:10px;border-left:1px solid var(--bd)}
+.tb .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.ct{padding:20px 22px 60px;max-width:1180px}
+/* 通用 */
+.card{background:var(--panel);border:1px solid var(--bd);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.card-h{padding:13px 18px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:10px}
+.card-h h3{font-size:14px;font-weight:600}
+.card-h .sub{font-size:12px;color:var(--mut)}
+.card-h .r{margin-left:auto}
+.card-b{padding:16px 18px}
+.card-b.tb0{padding-top:0}
+.btn{border:1px solid var(--bd);background:#fff;color:var(--tx2);padding:7px 14px;border-radius:7px;
+  cursor:pointer;font-size:13px;font-family:inherit;transition:.15s;white-space:nowrap}
+.btn:hover{border-color:var(--pri);color:var(--pri)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.pri:hover{background:#1a52d8;color:#fff}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.dan{color:var(--er);border-color:#f5c2c2}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.gb{background:var(--gr-l)}
+table{width:100%;border-collapse:collapse}
+th{background:#fafbfc;text-align:left;padding:9px 12px;font-size:12px;color:var(--tx2);
+  font-weight:600;border-bottom:1px solid var(--bd);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--bd2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fcfdfe}
+.ct{text-align:center}.rd{text-align:right}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:Consolas,Monaco,monospace;font-size:12px}
+.tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap}
+.tag.b{background:var(--pri-l);color:var(--pri)}
+.tag.g{background:var(--ok-l);color:var(--ok)}
+.tag.o{background:var(--wn-l);color:var(--wn)}
+.tag.r{background:var(--er-l);color:var(--er)}
+.tag.gr{background:var(--gr-l);color:var(--gr)}
+.sm{font-size:12px}
+.mut{color:var(--mut)}
+.b{font-weight:600}
+.flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mb{margin-bottom:16px}.mt{margin-top:12px}
+.alert{display:flex;gap:9px;padding:11px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;line-height:1.65}
+.alert i{font-style:normal;font-weight:700;flex:0 0 18px;height:18px;line-height:18px;text-align:center;
+  border-radius:50%;font-size:11px;background:rgba(0,0,0,.08)}
+.alert.b{background:var(--pri-l);color:#1e40af}
+.alert.g{background:var(--ok-l);color:#065f46}
+.alert.o{background:var(--wn-l);color:#92400e}
+.alert.r{background:var(--er-l);color:#991b1b}
+.alert .x{margin-left:auto;cursor:pointer;color:inherit;opacity:.5;font-size:15px;line-height:1}
+/* 表单 */
+.fg{margin-bottom:14px}
+.fg>label{display:block;font-size:12.5px;color:var(--tx2);font-weight:600;margin-bottom:5px}
+.fg>label .req{color:var(--er);margin-left:3px}
+.fg>label .op{color:var(--mut);font-weight:400;margin-left:4px;font-size:11px}
+input[type=text],input[type=number],input[type=date],input[type=tel],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:7px;font-size:13px;
+  font-family:inherit;color:var(--tx);background:#fff;transition:.15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-l)}
+textarea{min-height:70px;resize:vertical;line-height:1.6}
+.hint{font-size:11.5px;color:var(--mut);margin-top:4px;line-height:1.55}
+.grid{display:grid;gap:12px 16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk label{display:flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:7px;
+  padding:7px 11px;cursor:pointer;font-size:12.5px;background:#fff;transition:.15s}
+.chk label:hover{border-color:var(--pri)}
+.chk input{accent-color:var(--pri);width:14px;height:14px}
+.chk label.on{border-color:var(--pri);background:var(--pri-l);color:var(--pri);font-weight:500}
+/* 档位卡 */
+.mcol{margin-bottom:18px}
+.mcol-h{display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:600}
+.mcol-h .n{margin-left:auto;font-size:12px;font-weight:400;opacity:.8}
+.mc{border:1px solid var(--bd);border-top:none;background:#fff}
+.mc:last-child{border-radius:0 0 8px 8px}
+.mrow{padding:12px 14px;border-bottom:1px solid var(--bd2);display:flex;gap:14px;align-items:flex-start}
+.mrow:last-child{border-bottom:none}
+.mrow .info{flex:1;min-width:0}
+.mrow .info h4{font-size:13.5px;font-weight:600;margin-bottom:3px}
+.mrow .info .meta{font-size:12px;color:var(--mut)}
+.mrow .rsn{flex:0 0 300px;font-size:12px;line-height:1.75}
+.mrow .rsn div{display:flex;gap:6px}
+.mrow .rsn .k{flex:0 0 34px;font-weight:600;color:var(--tx2)}
+.mrow .act{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.ml-g{background:var(--ok-l);color:var(--ok)}.mc-g{border-color:#b7e4dd}
+.ml-b{background:var(--pri-l);color:var(--pri)}.mc-b{border-color:#c3d8ff}
+.ml-r{background:var(--er-l);color:var(--er)}.mc-r{border-color:#f5c2c2}
+.ml-u{background:var(--gr-l);color:var(--gr)}.mc-u{border-color:#dbe2ea}
+/* 二维码 */
+.qrw{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.qrbox{flex:0 0 auto;text-align:center;padding:14px;background:#fff;border:1px solid var(--bd);border-radius:10px}
+.qrbox svg{display:block;margin:0 auto}
+.qrbox .cap{font-size:11.5px;color:var(--mut);margin-top:8px}
+.lnk{display:flex;gap:7px;align-items:center;margin-top:10px}
+.lnk input{font-family:Consolas,Monaco,monospace;font-size:11.5px}
+.sitebox{margin-top:10px;background:#f8fafc;border:1px solid var(--bd2);border-radius:8px;padding:9px 10px}
+.sitebox .t{font-size:11.5px;color:var(--tx2);font-weight:600;margin-bottom:6px}
+.sitebox .rw{display:flex;gap:6px;align-items:center}
+.sitebox input{flex:1;font-family:Consolas,Monaco,monospace;font-size:11.5px}
+.sitebox .tip{font-size:11px;color:var(--mut);margin-top:6px;line-height:1.55}
+/* 扫码模式（供应商端全屏：隐藏研发端外壳） */
+body.scan .sb{display:none}
+body.scan .mn{margin-left:0}
+body.scan .tb{display:none}
+body.scan .ct{padding:0;max-width:none}
+body.scan .phonew{padding:0;min-height:100vh}
+body.scan .phone{width:100%;max-width:520px;border:0;border-radius:0;box-shadow:none}
+body.scan .phone .body{max-height:none;overflow:visible;padding:14px 14px 46px}
+/* 手机模拟 */
+.phonew{display:flex;justify-content:center;padding:8px 0 20px}
+.phone{width:390px;background:#fff;border:1px solid #cbd5e1;border-radius:26px;overflow:hidden;
+  box-shadow:0 8px 28px rgba(15,23,42,.13)}
+.phone .bar{background:#0f172a;color:#fff;padding:9px 14px;font-size:12px;display:flex;align-items:center;gap:8px}
+.phone .bar .t{flex:1;text-align:center;font-weight:500}
+.phone .body{max-height:640px;overflow-y:auto;padding:14px}
+.phone .body::-webkit-scrollbar{width:5px}
+.phone .body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+.psec{background:#f8fafc;border:1px solid var(--bd2);border-radius:8px;padding:11px 12px;margin-bottom:13px}
+.psec h5{font-size:12px;color:var(--tx2);font-weight:600;margin-bottom:6px}
+.psec .kv{display:flex;font-size:12px;padding:2.5px 0;line-height:1.5}
+.psec .kv .k{flex:0 0 74px;color:var(--mut)}
+.psec .kv .v{flex:1;color:var(--tx)}
+.pfg{margin-bottom:11px}
+.pfg label{display:block;font-size:11.5px;color:var(--tx2);font-weight:600;margin-bottom:4px}
+.pfg label .req{color:var(--er)}
+.pfg input,.pfg select,.pfg textarea{padding:7px 9px;font-size:12.5px;border-radius:6px}
+.pfg textarea{min-height:48px}
+.prow{display:flex;gap:9px}
+.prow>*{flex:1}
+.pinline{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx2);margin-top:4px}
+.pinline input{width:64px;flex:0 0 auto}
+/* 构件清单表 */
+.itab{width:100%;border-collapse:collapse;font-size:12px}
+.itab th,.itab td{border:1px solid var(--bd2);padding:5px 7px;vertical-align:middle;line-height:1.5}
+.itab th{background:#f8fafc;font-weight:600;color:var(--tx2);text-align:left;white-space:nowrap}
+.itab input{width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px;border:1px solid var(--bd);border-radius:5px}
+.itab input:focus{outline:none;border-color:var(--br);box-shadow:0 0 0 2px var(--br-bg)}
+.itab td.num,.itab th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.itab td.ct,.itab th.ct{text-align:center}
+.itab .sp2{color:var(--mut);font-size:11px;line-height:1.4;margin-top:2px}
+.itab tfoot td{background:#f1f5f9;font-weight:600}
+.itab .low{color:var(--ok);font-weight:700}
+.itab .high{color:var(--er)}
+.itab .na{color:#cbd5e1}
+.phone .itab{font-size:11px}
+.phone .itab th,.phone .itab td{padding:4px 3px}
+.phone .itab input{padding:4px 3px;font-size:11.5px;text-align:right}
+.phone .itab .sp2{font-size:10px}
+/* 抽屉 */
+.mask{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:50;display:none}
+.mask.on{display:block}
+.dw{position:fixed;right:0;top:0;height:100vh;width:520px;background:#fff;z-index:51;
+  box-shadow:-6px 0 24px rgba(15,23,42,.14);transform:translateX(100%);transition:.22s;
+  display:flex;flex-direction:column}
+.dw.on{transform:none}
+.dw-h{padding:15px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.dw-h h3{font-size:15px}
+.dw-h .x{margin-left:auto;cursor:pointer;color:var(--mut);font-size:19px;line-height:1}
+.dw-b{flex:1;overflow-y:auto;padding:18px 20px}
+.empty{text-align:center;padding:44px 20px;color:var(--mut);font-size:13px}
+.empty .ic{font-size:30px;opacity:.3;margin-bottom:8px}
+hr.sp{border:none;border-top:1px solid var(--bd2);margin:16px 0}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--bd);border-radius:9px;padding:12px 14px}
+.stat .l{font-size:11.5px;color:var(--mut)}
+.stat .v{font-size:21px;font-weight:600;margin:1px 0}
+.stat .v small{font-size:11px;font-weight:400;color:var(--mut);margin-left:2px}
+.stat .d{font-size:11px;color:var(--mut)}
+.bar{height:6px;background:var(--bd2);border-radius:3px;overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;background:var(--pri)}
+.stepdot{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:16px}
+.stepdot .s{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--mut)}
+.stepdot .s .n{width:22px;height:22px;border-radius:50%;background:var(--gr-l);color:var(--gr);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.stepdot .s.on{color:var(--pri);font-weight:600}
+.stepdot .s.on .n{background:var(--pri);color:#fff}
+.stepdot .s.done .n{background:var(--ok);color:#fff}
+.stepdot .ar{flex:0 0 26px;height:1px;background:var(--bd);margin:0 6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sb">
+    <div class="sb-h"><h1>研发供应商资源平台</h1><span>R&amp;D Supplier Hub · v1</span></div>
+    <nav id="nav">
+      <a data-p="list"><i>▤</i>需求列表<b id="bgList">3</b></a>
+      <a data-p="match"><i>◎</i>智能匹配</a>
+      <a data-p="quote"><i>¥</i>询价比价<b id="bgQuote">0</b></a>
+      <a data-p="lib"><i>◈</i>供应商库<b id="bgLib">0</b></a>
+    </nav>
+    <div class="sb-f">
+      <b>依据</b>：简易任务书 v1<br>
+      <b>三功能</b>：需求发布 / 智能匹配 / 询价比价<br>
+      <b>判定</b>：三档条文，无分数无权重
+    </div>
+  </aside>
+  <div class="mn">
+    <div class="tb">
+      <h2 id="pgTitle">需求列表</h2><span class="crumb" id="pgCrumb">全部需求</span>
+      <div class="r" id="tbR"></div>
+    </div>
+    <div class="ct" id="view"></div>
+  </div>
+</div>
+<div class="mask" id="mask" onclick="closeDw()"></div>
+<div class="dw" id="dw"><div class="dw-h"><h3 id="dwT">详情</h3><span class="x" onclick="closeDw()">×</span></div>
+  <div class="dw-b" id="dwB"></div></div>
+
+<script>
+/* =======================================================================
+   零依赖二维码编码器  byte mode / EC level M / version 1-10
+   ======================================================================= */
+const QR=(function(){
+  const EXP=new Array(512),LOG=new Array(256);
+  (function(){let x=1;for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&0x100)x^=0x11D;}
+    for(let i=255;i<512;i++)EXP[i]=EXP[i-255];})();
+  const mul=(a,b)=>(a===0||b===0)?0:EXP[LOG[a]+LOG[b]];
+  function genPoly(n){let p=[1];
+    for(let i=0;i<n;i++){const np=new Array(p.length+1).fill(0);
+      for(let j=0;j<p.length;j++){np[j]^=mul(p[j],EXP[i]);np[j+1]^=p[j];}p=np;}
+    return p.slice().reverse();}
+  function rsRem(data,ecLen){
+    const g=genPoly(ecLen),res=new Array(data.length+ecLen).fill(0);
+    for(let i=0;i<data.length;i++)res[i]=data[i];
+    for(let i=0;i<data.length;i++){const c=res[i];
+      if(c!==0)for(let j=1;j<g.length;j++)res[i+j]^=mul(g[j],c);}
+    return res.slice(data.length);}
+  /* [数据码字总数, 每块数据码字数, 每块纠错码字数] —— M 级（15% 纠错），v1–v25 */
+  const SPEC={1:[16,[16],10],2:[28,[28],16],3:[44,[44],26],4:[64,[32,32],18],5:[86,[43,43],24],
+    6:[108,[27,27,27,27],16],7:[124,[31,31,31,31],18],8:[154,[38,38,39,39],22],
+    9:[182,[36,36,36,37,37],22],10:[216,[43,43,43,43,44],26],
+    11:[254,[50,51,51,51,51],30],12:[290,[36,36,36,36,36,36,37,37],22],
+    13:[334,[37,37,37,37,37,37,37,37,38],22],14:[365,[40,40,40,40,41,41,41,41,41],24],
+    15:[415,[41,41,41,41,41,42,42,42,42,42],24],16:[453,[45,45,45,45,45,45,45,46,46,46],28],
+    17:[507,[46,46,46,46,46,46,46,46,46,46,47],28],
+    18:[563,[43,43,43,43,43,43,43,43,43,44,44,44,44],26],
+    19:[627,[44,44,44,45,45,45,45,45,45,45,45,45,45,45],26],
+    20:[669,[41,41,41,42,42,42,42,42,42,42,42,42,42,42,42,42],26],
+    21:[714,[42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42],26],
+    22:[782,[46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46],28],
+    23:[860,[47,47,47,47,48,48,48,48,48,48,48,48,48,48,48,48,48,48],28],
+    24:[914,[45,45,45,45,45,45,46,46,46,46,46,46,46,46,46,46,46,46,46,46],28],
+    25:[1000,[47,47,47,47,47,47,47,47,48,48,48,48,48,48,48,48,48,48,48,48,48],28]};
+  const MAXVER=25;
+  const ALIGN={1:[],2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46],
+    10:[6,28,50],11:[6,30,54],12:[6,32,58],13:[6,34,62],14:[6,26,46,66],15:[6,26,48,70],
+    16:[6,26,50,74],17:[6,30,54,78],18:[6,30,56,82],19:[6,30,58,86],20:[6,34,62,90],
+    21:[6,28,50,72,94],22:[6,26,50,74,98],23:[6,30,54,78,102],24:[6,28,54,80,106],25:[6,32,58,84,110]};
+  /* 指定版本在 byte 模式下能装多少字节（用于容量预判与提示） */
+  function byteCap(v){
+    if(!SPEC[v])return 0;
+    return Math.floor((SPEC[v][0]*8-(4+(v<=9?8:16)))/8);
+  }
+  function bchFmt(d){let v=d<<10;for(let i=4;i>=0;i--)if((v>>(10+i))&1)v^=0x537<<i;return ((d<<10)|v)^0x5412;}
+  function bchVer(d){let v=d<<12;for(let i=5;i>=0;i--)if((v>>(12+i))&1)v^=0x1F25<<i;return (d<<12)|v;}
+  function utf8(s){const o=[];for(const ch of s){const c=ch.codePointAt(0);
+    if(c<0x80)o.push(c);
+    else if(c<0x800)o.push(0xC0|(c>>6),0x80|(c&63));
+    else if(c<0x10000)o.push(0xE0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));
+    else o.push(0xF0|(c>>18),0x80|((c>>12)&63),0x80|((c>>6)&63),0x80|(c&63));}
+    return o;}
+  function encode(text){
+    const bytes=utf8(text);let ver=0;
+    for(let v=1;v<=MAXVER;v++){
+      const need=4+(v<=9?8:16)+bytes.length*8;
+      if(need<=SPEC[v][0]*8){ver=v;break;}}
+    if(!ver)throw new Error('内容过长，超出二维码容量（上限 '+MAXVER+' 版 / '
+      +byteCap(MAXVER)+' 字节）。请精简需求内容，或用「导出询价页 HTML」方式下发。');
+    if(ver>15&&typeof console!=='undefined')console.warn('二维码版本 v'+ver+'，模块较密，打印时请保证尺寸 ≥ 4cm');
+    const [totalData,blocks,ecLen]=SPEC[ver],bits=[];
+    const push=(v,l)=>{for(let i=l-1;i>=0;i--)bits.push((v>>i)&1);};
+    push(4,4);push(bytes.length,ver<=9?8:16);bytes.forEach(b=>push(b,8));
+    const cap=totalData*8;
+    for(let i=0;i<4&&bits.length<cap;i++)bits.push(0);
+    while(bits.length%8)bits.push(0);
+    const cw=[];for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=(b<<1)|bits[i+j];cw.push(b);}
+    let k=0;while(cw.length<totalData){cw.push(k%2===0?0xEC:0x11);k++;}
+    const bd=[],be=[];let off=0;
+    for(let b=0;b<blocks.length;b++){const len=blocks[b],blk=cw.slice(off,off+len);off+=len;
+      bd.push(blk);be.push(rsRem(blk,ecLen));}
+    const fin=[];const mx=Math.max.apply(null,blocks);
+    for(let i=0;i<mx;i++)for(let b=0;b<bd.length;b++)if(i<bd[b].length)fin.push(bd[b][i]);
+    for(let i=0;i<ecLen;i++)for(let b=0;b<be.length;b++)fin.push(be[b][i]);
+    const size=4*ver+17;
+    const mod=Array.from({length:size},()=>new Array(size).fill(0));
+    const fn=Array.from({length:size},()=>new Array(size).fill(false));
+    const SF=(y,x,v)=>{mod[y][x]=v;fn[y][x]=true;};
+    [[0,0],[0,size-7],[size-7,0]].forEach(function(p){
+      const r=p[0],c=p[1];
+      for(let dy=-1;dy<=7;dy++)for(let dx=-1;dx<=7;dx++){
+        const y=r+dy,x=c+dx;if(y<0||x<0||y>=size||x>=size)continue;
+        const ring=(dy>=0&&dy<=6&&dx>=0&&dx<=6)&&
+          (dy===0||dy===6||dx===0||dx===6||(dy>=2&&dy<=4&&dx>=2&&dx<=4));
+        SF(y,x,ring?1:0);}});
+    for(let i=8;i<size-8;i++){
+      if(!fn[6][i])SF(6,i,i%2===0?1:0);
+      if(!fn[i][6])SF(i,6,i%2===0?1:0);}
+    const ap=ALIGN[ver];
+    for(const r of ap)for(const c of ap){
+      if((r<=8&&c<=8)||(r<=8&&c>=size-9)||(r>=size-9&&c<=8))continue;
+      for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)
+        SF(r+dy,c+dx,Math.max(Math.abs(dy),Math.abs(dx))!==1?1:0);}
+    for(let i=0;i<9;i++){if(!fn[8][i])fn[8][i]=true;if(!fn[i][8])fn[i][8]=true;}
+    for(let i=0;i<8;i++){fn[8][size-1-i]=true;fn[size-1-i][8]=true;}
+    SF(size-8,8,1);
+    if(ver>=7){const vb=bchVer(ver);
+      for(let i=0;i<18;i++){const bit=(vb>>i)&1,a=Math.floor(i/3),b=i%3;
+        SF(size-11+b,a,bit);SF(a,size-11+b,bit);}}
+    const all=[];fin.forEach(b=>{for(let i=7;i>=0;i--)all.push((b>>i)&1);});
+    let bi=0;
+    for(let right=size-1;right>=1;right-=2){
+      if(right===6)right=5;
+      for(let vert=0;vert<size;vert++)for(let j=0;j<2;j++){
+        const x=right-j,up=((right+1)&2)===0,y=up?size-1-vert:vert;
+        if(!fn[y][x]){mod[y][x]=bi<all.length?all[bi]:0;bi++;}}}
+    const MF=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,
+      (x,y)=>(Math.floor(y/2)+Math.floor(x/3))%2===0,(x,y)=>(x*y)%2+(x*y)%3===0,
+      (x,y)=>((x*y)%2+(x*y)%3)%2===0,(x,y)=>((x+y)%2+(x*y)%3)%2===0];
+    const apply=m=>{const o=mod.map(r=>r.slice());
+      for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!fn[y][x]&&MF[m](x,y))o[y][x]^=1;return o;};
+    /* N3：出现类似定位图案的 1:1:3:1:1（前后带 4 格空白）每个 +40 */
+    const P3=[[1,0,1,1,1,0,1,0,0,0,0],[0,0,0,0,1,0,1,1,1,0,1]];
+    const hitN3=seq=>{let p=0;
+      for(let j=0;j+11<=seq.length;j++)for(let t=0;t<2;t++){
+        let ok=true;
+        for(let k=0;k<11;k++)if(seq[j+k]!==P3[t][k]){ok=false;break;}
+        if(ok){p+=40;break;}}
+      return p;};
+    const pen=m=>{let p=0;
+      for(let i=0;i<size;i++){
+        let run=1;for(let j=1;j<size;j++){if(m[i][j]===m[i][j-1]){run++;if(run===5)p+=3;else if(run>5)p++;}else run=1;}
+        run=1;for(let j=1;j<size;j++){if(m[j][i]===m[j-1][i]){run++;if(run===5)p+=3;else if(run>5)p++;}else run=1;}
+        p+=hitN3(m[i]);                                    /* 行方向 */
+        const col=[];for(let j=0;j<size;j++)col.push(m[j][i]);
+        p+=hitN3(col);                                     /* 列方向 */
+      }
+      for(let y=0;y<size-1;y++)for(let x=0;x<size-1;x++){
+        const c=m[y][x];if(c===m[y][x+1]&&c===m[y+1][x]&&c===m[y+1][x+1])p+=3;}
+      let dk=0;for(let y=0;y<size;y++)for(let x=0;x<size;x++)dk+=m[y][x];
+      const tt=size*size;
+      p+=Math.floor(Math.abs(dk*20-10*tt)/tt)*10;
+      return p;};
+    let best=null,bp=Infinity,bm=0;
+    for(let m=0;m<8;m++){const c=apply(m),p=pen(c);if(p<bp){bp=p;best=c;bm=m;}}
+    const fmt=bchFmt((0<<3)|bm);
+    for(let i=0;i<=5;i++)best[i][8]=(fmt>>i)&1;
+    best[7][8]=(fmt>>6)&1;best[8][8]=(fmt>>7)&1;best[8][7]=(fmt>>8)&1;
+    for(let i=9;i<15;i++)best[8][14-i]=(fmt>>i)&1;
+    for(let i=0;i<8;i++)best[8][size-1-i]=(fmt>>i)&1;
+    for(let i=8;i<15;i++)best[size-15+i][8]=(fmt>>i)&1;
+    best[size-8][8]=1;
+    return {mod:best,ver:ver,mask:bm,size:size};
+  }
+  /* 未传 scale 时自适应：整图约 300px，每模块不小于 3px（保证手机能扫） */
+  /* 内容能否装进二维码（用于决定「链接自带数据」还是退回短链） */
+  function fits(text){return utf8(text).length<=byteCap(MAXVER);}
+  function svg(text,scale){
+    const r=encode(text),n=r.size,pad=4,tot=n+pad*2;let d='';
+    if(!scale)scale=Math.min(8,Math.max(3,Math.floor(300/tot)));
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(r.mod[y][x])d+='M'+x+' '+y+'h1v1h-1z';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+tot+' '+tot+'" width="'+(tot*scale)+'" height="'+(tot*scale)+'" shape-rendering="crispEdges">'
+      +'<rect width="'+tot+'" height="'+tot+'" fill="#fff"/><path d="'+d+'" transform="translate('+pad+','+pad+')" fill="#0f172a"/></svg>';
+  }
+  return {encode:encode,svg:svg,fits:fits,cap:byteCap,MAXVER:MAXVER};
+})();
+
+/* ======================= 数据 ======================= */
+const SITE_DEFAULT='https://qutyler.github.io/rd-supplier-platform';   /* 线上站点地址（GitHub Pages） */
+const TODAY='2026-09-22';
+
+/* ---- 扫码链接 = 本页地址 + ?p=s1&d=需求号（扫出来直接进扫码报价页） ---- */
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function isHttp(){return location.protocol==='http:'||location.protocol==='https:';}
+/* 二维码前缀优先级：手填/存过的公网域名 > 当前站点目录 > 占位域名 */
+function siteBase(){
+  const s=lsGet('rd_site');
+  if(s)return String(s).replace(/\/+$/,'');
+  if(isHttp())return location.origin+location.pathname.replace(/[^/]*$/,'').replace(/\/+$/,'');
+  return SITE_DEFAULT;
+}
+function isPlaceholder(){return siteBase().indexOf('yourco.cn')>=0;}
+/* ---- 需求「随链接走」----------------------------------------------------
+   原型没有后端：研发在自己电脑上新建的需求，手机端是取不到的，
+   所以把需求内容压进二维码链接（?x=…）。手机扫码时用链接里的数据渲染，
+   不再去 DEMANDS 里找 —— 这才是「扫出来就有表格」的根本解法。
+   装不下时自动退回「只带需求号」的短链，并提示改用导出 HTML。          */
+function packClean(s,max){
+  let t=String(s==null?'':s)
+    .replace(/[~;,|&=+#%?/\\<>"'`^\[\]{}]/g,'')
+    .replace(/\s+/g,'_').trim();
+  return max&&t.length>max?t.slice(0,max)+'…':t;
+}
+function packUnclean(s){return String(s==null?'':s).replace(/_/g,' ');}
+/* 三档压缩：0 完整 / 1 精简 / 2 极简。二维码越密越难扫，装不下就退档 */
+const PACK_CFG=[[26,110,18,40,14,18],[20,40,8,0,10,10],[15,24,6,0,8,8]];
+/*                标题  描述  地点 验收 构件名 规格 */
+/* 打包格式 v2：预算由「区间」改为单个金额，少一个字段。
+   v1（16 段）旧链接仍可解析，预算取其上限，避免老二维码直接失效。 */
+function packDemand(d,lv){
+  const c=PACK_CFG[lv]||PACK_CFG[0];
+  const f=[packClean(d.title,c[0]),packClean(d.desc,c[1]),packClean(d.size,22),
+    packClean(d.acc),packClean(d.cycle),packClean(d.qty),packClean(d.delivery,18),
+    packClean(d.budget),packClean(d.place,c[2]),
+    packClean(d.deadline,16),c[3]?packClean(d.acceptance,c[3]):'',
+    (d.certs||[]).map(x=>packClean(x,6)).join('.')];
+  const items=(d.items||[]).map(it=>[packClean(it.name,c[4]),packClean(it.spec,c[5]),
+    packClean(it.unit,4),packClean(it.qty)].join(',')).join(';');
+  return ['2',packClean(d.id,20)].concat(f).concat([items]).join('~');
+}
+function unpackDemand(x){
+  try{
+    const a=String(x).split('~');
+    const ver=a[0];
+    if(ver==='1'&&a.length>=16){
+      const nn=v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
+      const o={id:packUnclean(a[1]),title:packUnclean(a[2]),desc:packUnclean(a[3]),
+        size:packUnclean(a[4]),acc:nn(a[5]),cycle:nn(a[6]),qty:nn(a[7])||1,
+        delivery:packUnclean(a[8]),budget:nn(a[10])||0,
+        place:packUnclean(a[11]),deadline:packUnclean(a[12]),acceptance:packUnclean(a[13]),
+        certs:String(a[14]||'').split('.').filter(Boolean),
+        drawings:[],closed:false,status:'询价中',fromLink:true,
+        items:String(a[15]||'').split(';').filter(Boolean).map(function(t){
+          const c=t.split(',');
+          return {name:packUnclean(c[0]),spec:packUnclean(c[1]),unit:packUnclean(c[2]),
+            qty:parseFloat(c[3])||1,remark:''};
+        })};
+      return (o.id&&o.items.length)?o:null;
+    }
+    if(a.length<15||ver!=='2')return null;
+    const num2=v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
+    const d={id:packUnclean(a[1]),title:packUnclean(a[2]),desc:packUnclean(a[3]),
+      size:packUnclean(a[4]),acc:num2(a[5]),cycle:num2(a[6]),qty:num2(a[7])||1,
+      delivery:packUnclean(a[8]),budget:num2(a[9])||0,
+      place:packUnclean(a[10]),deadline:packUnclean(a[11]),acceptance:packUnclean(a[12]),
+      certs:String(a[13]||'').split('.').filter(Boolean),
+      drawings:[],closed:false,status:'询价中',fromLink:true,
+      items:String(a[14]||'').split(';').filter(Boolean).map(function(t){
+        const c=t.split(',');
+        return {name:packUnclean(c[0]),spec:packUnclean(c[1]),unit:packUnclean(c[2]),
+          qty:parseFloat(c[3])||1,remark:''};
+      })};
+    if(!d.id||!d.items.length)return null;
+    return d;
+  }catch(e){return null;}
+}
+const PACK_MAXVER=20;                   /* 再密就扫不动了：超过这个版本改用导出 HTML */
+/* 返回 {url, lv}：lv=0 完整 / 1 精简 / 2 极简 / -1 装不下（只带需求号） */
+function qrUrlOf(d){
+  const f=isHttp()?('/'+(location.pathname.split('/').pop()||'')):'/';
+  const short=siteBase()+f+'?p=s1&d='+encodeURIComponent(d.id);
+  for(let lv=0;lv<PACK_CFG.length;lv++){
+    const u=short+'&x='+packDemand(d,lv);
+    if(!QR.fits(u))continue;
+    try{if(QR.encode(u).ver<=PACK_MAXVER)return {url:u,lv:lv};}catch(e){}
+  }
+  return {url:short,lv:-1};
+}
+function qrUrl(d){return qrUrlOf(d).url;}
+/* 本机自测链接：file:// 也能直接打开，用来验证扫码页长什么样 */
+function selfUrl(d){
+  return location.href.split('#')[0].split('?')[0]+'?p=s1&d='+encodeURIComponent(d.id);
+}
+let scanMode=false;
+function urlParams(){
+  const q=new URLSearchParams(location.search||'');
+  return {p:String(q.get('p')||'').toLowerCase(),d:q.get('d')||'',x:q.get('x')||''};
+}
+/* 扫码进入：链接里带 x 就用链接里的数据（不依赖服务器），否则按需求号找本地数据 */
+function enterScan(did,x){
+  scanMode=true;
+  if(x)SCAN_DATA=unpackDemand(x);
+  if(SCAN_DATA)s1Demand=SCAN_DATA.id;
+  else{
+    const hit=DEMANDS.some(function(y){return y.id===did;});
+    if(did&&hit)s1Demand=did;
+    else if(did)s1Demand='__NOTFOUND__';     /* 链接既没带数据、单号又对不上 */
+  }
+  document.body.classList.add('scan');
+  const d=DM(s1Demand);
+  document.title=d?('询价单报价 · '+d.id):'询价单报价';
+  go('s1');
+}
+const CERT_LABEL={'NDA':'需签 NDA','认证':'需体系/行业认证','不外协':'关键工序不得外协','试机':'需带料试机'};
+const CERT_KEYS=['NDA','认证','不外协','试机'];
+
+const SUPPLIERS=[
+ {id:'S001',name:'苏州恒锐智能装备',city:'江苏 苏州',contact:'王经理',phone:'138-1234-5678',
+  maxSize:'6000×3000×2500',acc:0.02,cycle:2,priceMin:30,priceMax:200,unit:'整机',
+  sample:true,minAmount:20,moq:1,leadDays:120,certs:['NDA','认证','不外协','试机'],
+  cases:['2025 为某 3C 客户做六工位转盘装配机，节拍 4s/件，一次验收通过',
+         '2024 汽车零部件检测专机 3 台，交付准时'],
+  note:'沟通顺畅，图纸规范。工程师 8 人，装配面积 1200㎡。'},
+ {id:'S002',name:'上海迈新自动化',city:'上海 松江',contact:'李工',phone:'139-8765-4321',
+  maxSize:'8000×4000×3500',acc:0.05,cycle:3,priceMin:80,priceMax:400,unit:'整机',
+  sample:true,minAmount:50,moq:1,leadDays:140,certs:['NDA','认证','试机'],
+  cases:['新能源电池模组装配线 2 条','医疗耗材包装机'],
+  note:'规模大但排产满，小单优先级低。'},
+ {id:'S003',name:'无锡精工机械',city:'江苏 无锡',contact:'陈经理',phone:'137-2345-6789',
+  maxSize:'4000×2500×2500',acc:0.05,cycle:2,priceMin:20,priceMax:120,unit:'整机',
+  sample:true,minAmount:10,moq:1,leadDays:75,certs:['NDA','试机'],
+  cases:['小型压装专机多台','输送单元集成'],
+  note:'价格有优势，装配面积 600㎡，4 吨以上设备偏勉强。'},
+ {id:'S004',name:'宁波中大力德模组',city:'浙江 宁波',contact:'周经理',phone:'135-3456-7890',
+  maxSize:'2000×400×300',acc:0.01,cycle:0,priceMin:0.05,priceMax:3,unit:'单件',
+  sample:true,minAmount:0,moq:5,leadDays:20,certs:['NDA'],
+  cases:['直线模组批量供货','KK 模组系列'],
+  note:'标准品为主，定制能力弱。'},
+ {id:'S005',name:'苏州锐进精密机械',city:'江苏 苏州',contact:'吴工',phone:'136-4567-8901',
+  maxSize:'1500×1000×800',acc:0.005,cycle:0,priceMin:0.02,priceMax:0.8,unit:'单件',
+  sample:true,minAmount:0,moq:1,leadDays:25,certs:['NDA','认证'],
+  cases:['精密治具','检具'],
+  note:'小件精度好，做不了整机。'},
+ {id:'S006',name:'南通重型装备制造',city:'江苏 南通',contact:'赵总',phone:'158-5678-9012',
+  maxSize:'25000×8000×6000',acc:0.5,cycle:0,priceMin:150,priceMax:900,unit:'整机',
+  sample:false,minAmount:100,moq:1,leadDays:180,certs:['认证'],
+  cases:['大型输送线','港口设备结构件'],
+  note:'不接研发打样，最小项目 100 万。'},
+ {id:'S007',name:'深圳速造钣金',city:'广东 深圳',contact:'孙经理',phone:'159-6789-0123',
+  maxSize:'3000×1500×1000',acc:0.1,cycle:0,priceMin:0.01,priceMax:2,unit:'单件',
+  sample:true,minAmount:0,moq:10,leadDays:15,certs:[],
+  cases:['机箱机柜','钣金结构件批量'],
+  note:'远，且只做钣金。'},
+ {id:'S008',name:'常州联创机电',city:'江苏 常州',contact:'钱工',phone:'150-7890-1234',
+  maxSize:'5000×3000×2500',acc:null,cycle:4,priceMin:40,priceMax:180,unit:'整机',
+  sample:true,minAmount:30,moq:1,leadDays:110,certs:['NDA','试机'],
+  cases:['绕线机','点胶机'],
+  note:'典型精度未核实 —— 需补录后重判。'}
+];
+
+/* 设备主要构件清单：需求方填名称/规格/数量，单价与小计由供应商扫码填写 */
+const ITEMS={
+ 'D-2026-014':[
+  {name:'转盘分度机构',spec:'DD 马达直驱，6 工位，重复定位 ±0.02mm',unit:'套',qty:1,remark:'含分度盘与支撑'},
+  {name:'上料振动盘+直振',spec:'兼容 φ3-12mm 小件，含料满检测',unit:'套',qty:1,remark:''},
+  {name:'压装伺服单元',spec:'行程 100mm，压力 0-5kN，带压力位移监控',unit:'套',qty:2,remark:''},
+  {name:'锁付机构',spec:'伺服电批，扭矩 0.2-2N·m，带扭力反馈',unit:'套',qty:2,remark:''},
+  {name:'视觉检测工位',spec:'200 万像素相机 + 环形光源，6 项检测',unit:'套',qty:1,remark:'检测项不得删减'},
+  {name:'机架框架',spec:'40×80 铝型材 + 焊接底座，3500×2500×2200',unit:'套',qty:1,remark:''},
+  {name:'电气控制柜',spec:'含 PLC、伺服驱动、10" 触摸屏、安全回路',unit:'套',qty:1,remark:''},
+  {name:'安全防护罩',spec:'含安全门锁与光栅',unit:'套',qty:1,remark:''},
+  {name:'装配调试与试机',spec:'现场安装、带料试机、操作培训',unit:'项',qty:1,remark:'须在我方现场完成'}
+ ],
+ 'D-2026-021':[
+  {name:'直线模组本体',spec:'行程 800mm，重复定位 ±0.02mm，负载 30kg',unit:'套',qty:20,remark:'含滑块'},
+  {name:'伺服电机',spec:'400W，含编码器线与接头',unit:'台',qty:20,remark:''},
+  {name:'滑块连接件',spec:'按图纸加工，铝合金 6061-T6',unit:'件',qty:20,remark:''},
+  {name:'包装运输',spec:'木箱包装，送货到厂',unit:'批',qty:1,remark:''}
+ ],
+ 'D-2026-022':[
+  {name:'柔性供料器',spec:'视觉 + 机器人抓取，兼容多品种来料',unit:'套',qty:1,remark:''},
+  {name:'六轴机器人',spec:'负载 5kg，臂展 900mm',unit:'台',qty:1,remark:''},
+  {name:'视觉系统',spec:'相机 + 镜头 + 光源 + 标定件',unit:'套',qty:1,remark:''},
+  {name:'快换夹具',spec:'按来料定制，2 套互换',unit:'套',qty:2,remark:''}
+ ]
+};
+const DEMANDS=[
+ {id:'D-2026-014',title:'六工位转盘式装配机（研发样机）',
+  desc:'3C 小件自动上料→压装→锁付→检测→下料，用于 A3 项目首台样机验证',
+  size:'3500×2500×2200',acc:0.05,cycle:4,qty:1,delivery:'2027-01-15',
+  budget:150,place:'苏州',certs:['NDA','试机'],
+  deadline:'2026-09-28 17:00',acceptance:'连续运行 72h 无故障；节拍达标；良率≥99.5%',
+  drawings:['装配机总图_v3.pdf','工位布局图.dwg'],note:'方案已定稿，图纸可签 NDA 后提供',
+  items:ITEMS['D-2026-014'],status:'询价中',closed:false},
+ {id:'D-2026-021',title:'直线模组 20 套（含滑块）',
+  desc:'A3 项目 XYZ 平台用，行程 800mm，配伺服',
+  size:'950×120×90',acc:0.02,cycle:0,qty:20,delivery:'2026-11-20',
+  budget:8,place:'苏州',certs:['NDA'],
+  deadline:'2026-09-26 17:00',acceptance:'到货全检尺寸，提供材质与检测报告',
+  drawings:['模组规格书.pdf'],note:'预算 8 万（整批 20 套）',
+  items:ITEMS['D-2026-021'],status:'询价中',closed:false},
+ {id:'D-2026-022',title:'柔性上料单元方案摸底',
+  desc:'方案未定，先摸底：谁做过、大致多少钱、愿不愿参与',
+  size:'1200×1000×1500',acc:0.1,cycle:6,qty:1,delivery:'2027-03-30',
+  budget:60,place:'苏州',certs:[],
+  deadline:'2026-10-10 17:00',acceptance:'',drawings:[],
+  note:'概念阶段，暂无定稿图纸，仅文字描述',items:ITEMS['D-2026-022'],
+  status:'草稿',closed:false}
+];
+/* 按需求构件生成报价明细：只存单价，小计 = 单价 × 需求里的数量。
+   注意：此处只能用 DEMANDS 直接查找 —— DM 是 const 箭头函数，初始化阶段调用会触发 TDZ。 */
+function mkItems(did,prices){
+  const d=DEMANDS.filter(function(x){return x.id===did;})[0];
+  return ((d&&d.items)?d.items:[]).map(function(it,i){
+    return {i:i,price:prices[i]==null?null:prices[i]};
+  });
+}
+
+const QUOTES=[
+ {id:'Q001',did:'D-2026-014',company:'苏州恒锐智能装备',contact:'王经理',phone:'13812345678',
+  items:mkItems('D-2026-014',[68000,32000,45000,38000,56000,42000,52000,26000,38000]),
+  total:480000,taxIncluded:true,taxRate:13,freightIncluded:true,freight:0,
+  installIncluded:true,installFee:0,designIncluded:true,designFee:0,trialIncluded:true,trialFee:0,
+  leadDays:130,warranty:12,validDays:30,deviation:'无',note:'含现场安装调试与培训',
+  status:'已确认',at:'2026-09-18 10:22'},
+ {id:'Q002',did:'D-2026-014',company:'上海迈新自动化',contact:'李工',phone:'13987654321',
+  items:mkItems('D-2026-014',[66000,28000,43000,34000,38000,38000,52000,24000,20000]),
+  total:420000,taxIncluded:false,taxRate:13,freightIncluded:true,freight:0,
+  installIncluded:false,installFee:28000,designIncluded:false,designFee:45000,trialIncluded:true,trialFee:0,
+  leadDays:150,warranty:12,validDays:30,deviation:'检测工位由 6 项减为 4 项',note:'',
+  status:'已确认',at:'2026-09-18 15:40'},
+ {id:'Q003',did:'D-2026-014',company:'无锡精工机械',contact:'陈经理',phone:'13723456789',
+  items:mkItems('D-2026-014',[62000,26000,38000,30000,42000,40000,49000,0,22000]),
+  total:377000,taxIncluded:true,taxRate:13,freightIncluded:false,freight:6000,
+  installIncluded:false,installFee:18000,designIncluded:true,designFee:0,trialIncluded:false,trialFee:12000,
+  leadDays:75,warranty:12,validDays:20,deviation:'防护罩改为选配，不在本次范围',note:'',
+  status:'已确认',at:'2026-09-19 09:05'},
+ {id:'Q004',did:'D-2026-014',company:'常州联创机电',contact:'钱工',phone:'15078901234',
+  items:mkItems('D-2026-014',[70000,30000,42000,36000,56000,40000,48000,25000,20000]),
+  total:445000,taxIncluded:true,taxRate:13,freightIncluded:true,freight:0,
+  installIncluded:true,installFee:0,designIncluded:true,designFee:0,trialIncluded:true,trialFee:0,
+  leadDays:110,warranty:18,validDays:30,deviation:'无',note:'',
+  status:'已确认',at:'2026-09-19 14:18'},
+ {id:'Q005',did:'D-2026-014',company:'苏州某某自动化（陌生厂）',contact:'刘经理',phone:'18600001111',
+  items:mkItems('D-2026-014',[52000,22000,32000,28000,42000,40000,43000,18000,15000]),
+  total:352000,taxIncluded:true,taxRate:13,freightIncluded:true,freight:0,
+  installIncluded:true,installFee:0,designIncluded:true,designFee:0,trialIncluded:true,trialFee:0,
+  leadDays:60,warranty:12,validDays:15,deviation:'无',note:'',
+  status:'待核实',at:'2026-09-20 08:33'}
+];
+
+let curDemand='D-2026-014';
+let editingId=null;      /* 正在编辑的需求 id，null=新建 */
+let pendingFiles=[];     /* 新建/编辑时选中的图纸 */
+let formItems=[];        /* 需求单里的构件清单（编辑中） */
+let flash=null;          /* 页面顶部一次性提示 */
+let overrides={};        /* 手动改档：{'D-2026-014_S001':{grade,reason}} */
+let s1Demand='D-2026-014';
+
+/* ======================= 工具 ======================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* 扫码端随链接带过来的需求（原型无后端，手机端取不到研发本地的数据，只能随链接走） */
+let SCAN_DATA=null;
+const DM=id=>{
+  if(SCAN_DATA&&(id===SCAN_DATA.id||id==='__URL__'))return SCAN_DATA;
+  return DEMANDS.find(d=>d.id===id);
+};
+const SM=id=>SUPPLIERS.find(s=>s.id===id);
+const fmt=n=>Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2});
+const wan=n=>(n/10000).toFixed(1);
+const num=v=>{const x=parseFloat(v);return isNaN(x)?null:x;};
+const dims=s=>String(s||'').split(/[×xX*]/).map(v=>parseFloat(v)||0).filter(v=>v>0);
+const today=()=>TODAY;
+const daysLeft=date=>{const a=new Date(TODAY),b=new Date(date);return Math.round((b-a)/864e5);};
+const quotesOf=id=>QUOTES.filter(q=>q.did===id);
+const confirmedOf=id=>QUOTES.filter(q=>q.did===id&&q.status==='已确认');
+const pendingOf=id=>QUOTES.filter(q=>q.did===id&&q.status==='待核实');
+/* ---- 构件明细金额 ---- */
+const itemQty=(d,i)=>{const it=(d&&d.items)?d.items[i]:null;return it?(Number(it.qty)||0):0;};
+const itemSub=(d,it)=>Math.round((Number(it&&it.price)||0)*itemQty(d,it?it.i:0));
+function itemSum(q){const d=DM(q.did);return (q.items||[]).reduce((a,it)=>a+itemSub(d,it),0);}
+/* 有构件清单时以逐行合价为准，避免明细与总价对不上 */
+function quoteBase(q){return (q.items&&q.items.length)?itemSum(q):(Number(q.total)||0);}
+/* 未报价的构件项数：0 元或空都算「未含」 */
+function missingItems(q){return (q.items||[]).filter(it=>it.price==null||Number(it.price)===0).length;}
+/* 到手总价：唯一的计算 */
+function landed(q){
+  let v=quoteBase(q);
+  if(!q.taxIncluded) v+=v*(q.taxRate||13)/100;   /* 计税基数必须与报价合价一致 */
+  if(!q.freightIncluded) v+=q.freight||0;
+  if(!q.installIncluded) v+=q.installFee||0;
+  if(!q.designIncluded) v+=q.designFee||0;
+  if(!q.trialIncluded) v+=q.trialFee||0;
+  return v;
+}
+function landedExplain(q){
+  const p=[];
+  if(!q.taxIncluded)p.push('税 +'+fmt(Math.round(Math.round(quoteBase(q))*(q.taxRate||13)/100)));
+  if(!q.freightIncluded)p.push('运费 +'+fmt(q.freight||0));
+  if(!q.installIncluded)p.push('安装 +'+fmt(q.installFee||0));
+  if(!q.designIncluded)p.push('设计 +'+fmt(q.designFee||0));
+  if(!q.trialIncluded)p.push('试机 +'+fmt(q.trialFee||0));
+  return p.length?p.join('；'):'口径已全含，无需折算';
+}
+
+/* ======================= 三档判定（条文，无分数） ======================= */
+/* R1 能力边界（唯一硬门槛）→ R2 接单意愿 → R3 资质 → R4 预算 */
+function judge(d,s){
+  const R=[];
+  const add=(k,ok,txt)=>R.push({k:k,ok:ok,txt:txt});
+  /* R1 */
+  const ds=dims(d.size),ss=dims(s.maxSize);
+  let sizeOk=null,sizeTxt='';
+  if(!ds.length||!ss.length){sizeTxt='尺寸数据缺失，无法判定';}
+  else if(ds.length!==ss.length){sizeTxt='尺寸维度不一致（'+ds.length+'D vs '+ss.length+'D），无法判定';}
+  else{sizeOk=ds.every((v,i)=>v<=ss[i]);
+    sizeTxt='需求 '+d.size+' vs 厂 '+s.maxSize+' → '+(sizeOk?'满足':'<b>超出</b>');}
+  let accOk=null,accTxt='';
+  if(d.acc==null||s.acc==null){accTxt='精度数据缺失，无法判定';}
+  else{accOk=d.acc>=s.acc;
+    accTxt='需求 ±'+d.acc+'mm vs 厂 ±'+s.acc+'mm → '+(accOk?'厂能做到':'<b>厂达不到</b>');}
+  let cyOk=null,cyTxt='';
+  if(!d.cycle){cyTxt='本需求无节拍要求，跳过';cyOk=true;}
+  else if(s.cycle==null){cyTxt='厂可达节拍未填，无法判定';}
+  else if(s.cycle===0){cyOk=false;cyTxt='厂不做节拍类产品（档案填 0）→ <b>无法满足节拍要求</b>';}
+  else{cyOk=d.cycle>=s.cycle;
+    cyTxt='需求 '+d.cycle+'s/件 vs 厂 '+s.cycle+'s/件 → '+(cyOk?'厂做得到':'<b>厂达不到</b>');}
+  const r1Unknown=[sizeOk,accOk,cyOk].indexOf(null)>=0;
+  const r1Fail=[sizeOk,accOk,cyOk].indexOf(false)>=0;
+  add('R1',r1Fail?false:r1Unknown?null:true,
+    '尺寸：'+sizeTxt+'<br>精度：'+accTxt+'<br>节拍：'+cyTxt);
+  /* R2 */
+  const left=daysLeft(d.delivery);
+  const qtyOk=(d.qty||0)>=(s.moq||0);
+  const amtOk=(d.budget||0)>=(s.minAmount||0);
+  const leadOk=s.leadDays==null?null:left>=(s.leadDays||0);
+  const r2Ok=(qtyOk||amtOk)&&leadOk!==false;
+  const r2Un=leadOk===null;
+  add('R2',r2Un?null:r2Ok,
+    '数量 '+d.qty+' vs MOQ '+(s.moq||0)+' → '+(qtyOk?'满足':'不满足')
+    +'；预算 '+(d.budget||0)+' 万 vs 最小金额 '+(s.minAmount||0)+' 万 → '+(amtOk?'满足':'不满足')
+    +'；剩余 '+left+' 天 vs 典型交期 '+(s.leadDays==null?'未填':s.leadDays+' 天')
+    +(leadOk==null?' → <b>未知</b>':leadOk?' → 满足':' → <b>不够</b>')
+    +(s.sample?'':'；<b>不接研发打样</b>'));
+  if(!s.sample)R[R.length-1].ok=false;
+  /* R3 */
+  const miss=(d.certs||[]).filter(c=>(s.certs||[]).indexOf(c)<0);
+  add('R3',miss.length?false:true,
+    d.certs&&d.certs.length
+      ? '需求要求：'+d.certs.map(c=>CERT_LABEL[c]).join('、')
+        +' → '+(miss.length?'<b>缺 '+miss.map(c=>CERT_LABEL[c]).join('、')+'</b>':'全部满足')
+      : '本需求无资质要求 → 满足');
+  /* R4：预算是单个金额，判断它是否落在厂的价格量级上（低于厂最低量级 → 厂不接） */
+  const bud=d.budget||0,pmin=s.priceMin||0,pmax=s.priceMax||0;
+  const r4Low=!pmin||bud>=pmin;                 /* 预算达到厂最低量级 */
+  const r4High=!pmax||bud<=pmax;                /* 未超出厂常规上限（超出只提示，不判死） */
+  add('R4',r4Low,
+    '预算 '+bud+' 万 vs 厂量级 '+pmin+'-'+pmax+' 万（'+s.unit+'）→ '
+    +(r4Low?(r4High?'落在厂常规量级内 → 满足':'<b>高于厂常规上限</b>，接单前需确认产能')
+           :'<b>低于厂最低量级</b>，厂可能不接'));
+  /* 档位 */
+  let grade;
+  if(r1Unknown) grade='待确认';
+  else if(r1Fail) grade='不符';
+  else{
+    const rest=[R[1].ok,R[2].ok,R[3].ok];
+    grade=rest.every(x=>x===true)?'推荐':'可联系';
+  }
+  return {grade:grade,R:R,r1Unknown:r1Unknown,r1Fail:r1Fail};
+}
+function gradeOf(d,s){
+  const ov=overrides[d.id+'_'+s.id];
+  return ov?{grade:ov.grade,R:judge(d,s).R,manual:true,reason:ov.reason}:judge(d,s);
+}
+
+/* ======================= 路由 ======================= */
+const TITLES={list:['需求列表','P1 · 全部需求'],form:['需求发布','P2 · 一张表单，不分类型'],
+  invite:['询价单','P3 · 二维码 + 链接'],match:['智能匹配','P4 · 三档标签 + 判定理由'],
+  quote:['询价比价','P5 · 到手总价排序'],supplier:['供应商档案','P6 · 3 分钟录一家'],
+  lib:['供应商库','P7 · 推荐+可联系的沉淀池'],
+  s1:['扫码报价页','S1 · 供应商端手机页（公网）']};
+let curPage='list';
+function go(p){
+  curPage=p;
+  const tt=TITLES[p]||['',''];
+  $('pgTitle').textContent=tt[0];$('pgCrumb').textContent=tt[1];
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));
+  /* supplier / s1 已从侧栏移除，入口改由页面内按钮进入，此处补「返回」 */
+  $('tbR').innerHTML = p==='list' ? '<button class="btn pri" onclick="openForm(null)">+ 新建需求</button>'
+    : p==='supplier' ? '<button class="btn pri" onclick="openSup(null)">+ 新增供应商</button>'
+      + '<button class="btn" onclick="go(\'lib\')">返回供应商库</button>'
+    : p==='form' ? '<button class="btn" onclick="go(\'list\')">返回列表</button>'
+    : p==='invite' ? '<button class="btn" onclick="go(\'list\')">返回列表</button>'
+    : p==='s1' ? '<button class="btn" onclick="go(\'invite\')">返回询价单</button>'
+    : p==='quote' ? '<button class="btn pri" onclick="openImport()">粘贴导入报价</button>'
+    : p==='lib' ? '<button class="btn" onclick="go(\'supplier\')">全部厂家档案</button>'
+      + '<button class="btn pri" onclick="libExport()">导出 CSV</button>' : '';
+  const v=$('view');
+  if(p==='list')v.innerHTML=rList();
+  else if(p==='form')v.innerHTML=rForm();
+  else if(p==='invite')v.innerHTML=rInvite();
+  else if(p==='match')v.innerHTML=rMatch();
+  else if(p==='quote')v.innerHTML=rQuote();
+  else if(p==='supplier')v.innerHTML=rSupplier();
+  else if(p==='lib')v.innerHTML=rLib();
+  else if(p==='s1')v.innerHTML=rS1();
+  refreshBadges();
+  window.scrollTo(0,0);
+}
+function refreshBadges(){
+  $('bgList').textContent=DEMANDS.length;
+  $('bgQuote').textContent=QUOTES.filter(q=>q.status==='待核实').length;
+  if($('bgSup'))$('bgSup').textContent=SUPPLIERS.length;
+  $('bgLib').textContent=LIB.filter(e=>e.status!=='已淘汰').length;
+}
+function setFlash(type,html){flash={type:type,html:html};}
+function flashHtml(){
+  if(!flash)return '';
+  const h='<div class="alert '+flash.type+'"><i>!</i><div>'+flash.html
+    +'</div><span class="x" onclick="flash=null;go(curPage)">×</span></div>';
+  return h;
+}
+
+/* ======================= P1 需求列表 ======================= */
+const ST_TAG={'草稿':'gr','询价中':'b','已定标':'g','已归档':'gr'};
+function rList(){
+  return flashHtml()+`
+  <div class="stat-row">
+    <div class="stat"><div class="l">需求总数</div><div class="v">${DEMANDS.length}<small>个</small></div>
+      <div class="d">询价中 ${DEMANDS.filter(d=>d.status==='询价中').length} · 草稿 ${DEMANDS.filter(d=>d.status==='草稿').length}</div></div>
+    <div class="stat"><div class="l">供应商</div><div class="v">${SUPPLIERS.length}<small>家</small></div>
+      <div class="d">档案完整 ${SUPPLIERS.filter(s=>s.acc!=null&&s.maxSize).length} 家</div></div>
+    <div class="stat"><div class="l">已收报价</div><div class="v">${QUOTES.length}<small>份</small></div>
+      <div class="d">待核实 ${QUOTES.filter(q=>q.status==='待核实').length} 份</div></div>
+    <div class="stat"><div class="l">待办</div><div class="v">${DEMANDS.filter(d=>d.status==='询价中').length}<small>项</small></div>
+      <div class="d">报价截止临近的需求</div></div>
+  </div>
+  <div class="alert b"><i>!</i><div><b>v1 只保留 4 个需求状态：</b>草稿 → 询价中 → 已定标 → 已归档。
+    不分整机/构配件模板，需求单只有一张表（12 字段，9 项必填）。</div></div>
+  <div class="card"><div class="card-h"><h3>全部需求</h3><div class="sub">${DEMANDS.length} 条</div>
+    <div class="r"><button class="btn pri sm" onclick="openForm(null)">+ 新建需求</button></div></div>
+  <table><thead><tr><th style="width:96px">编号</th><th>需求</th><th style="width:78px">数量</th>
+    <th style="width:96px">预算(万)</th><th style="width:100px">期望交期</th>
+    <th style="width:120px">报价截止</th><th style="width:80px">状态</th><th class="rd" style="width:230px">操作</th></tr></thead>
+  <tbody>${DEMANDS.map(d=>{
+    const n=quotesOf(d.id).length, pend=pendingOf(d.id).length;
+    const left=daysLeft(d.deadline.slice(0,10));
+    return `<tr>
+      <td class="mono">${d.id}</td>
+      <td><div class="b">${esc(d.title)}</div>
+        <div class="sm mut">${esc(d.desc).slice(0,40)}${esc(d.desc).length>40?'…':''} · ${esc(d.place)}
+        · <span style="color:var(--tx2)">构件 ${(d.items||[]).length} 项</span></div></td>
+      <td class="num">${d.qty}</td>
+      <td class="num">${d.budget}</td>
+      <td class="sm">${d.delivery}<div class="mut">剩 ${daysLeft(d.delivery)} 天</div></td>
+      <td class="sm">${esc(d.deadline)}<div class="mut ${left<3?'':''}">${left>=0?'剩 '+left+' 天':'已截止'}</div></td>
+      <td><span class="tag ${ST_TAG[d.status]}">${d.status}</span></td>
+      <td class="rd"><div class="flex" style="gap:5px;justify-content:flex-end">
+        <button class="btn sm" onclick="openForm('${d.id}')">编辑</button>
+        <button class="btn sm" onclick="curDemand='${d.id}';go('invite')">询价单</button>
+        <button class="btn sm" onclick="curDemand='${d.id}';go('match')">匹配</button>
+        <button class="btn sm" onclick="curDemand='${d.id}';go('quote')">报价${n?'('+n+')':''}</button>
+      </div>${pend?`<div class="sm" style="color:var(--wn);margin-top:3px">${pend} 份待核实</div>`:''}</td></tr>`;
+  }).join('')}</tbody></table>
+  ${DEMANDS.length?'':'<div class="empty"><div class="ic">▤</div>还没有需求，点右上角新建</div>'}</div>`;
+}
+
+/* ======================= P2 需求发布 / 编辑 ======================= */
+const DEF=id=>id?DM(id):null;
+function openForm(id){
+  editingId=id;
+  const d=id?DM(id):null;
+  formItems=d?JSON.parse(JSON.stringify(d.items||[]))
+             :[{name:'',spec:'',unit:'套',qty:1,remark:''},{name:'',spec:'',unit:'套',qty:1,remark:''},{name:'',spec:'',unit:'套',qty:1,remark:''}];
+  if(!formItems.length)formItems=[{name:'',spec:'',unit:'套',qty:1,remark:''}];
+  pendingFiles=(id?(DM(id).drawings||[]):[]).slice();
+  go('form');
+}
+/* ---- 构件明细编辑 ---- */
+function itemRows(){
+  return formItems.map(function(it,i){
+    return `<tr><td class="ct mut">${i+1}</td>
+      <td><input value="${esc(it.name)}" placeholder="如：转盘分度机构" oninput="setItem(${i},'name',this.value)"></td>
+      <td><input value="${esc(it.spec)}" placeholder="如：DD 马达直驱，6 工位，重复定位 ±0.02mm" oninput="setItem(${i},'spec',this.value)"></td>
+      <td><input value="${esc(it.unit)}" placeholder="套" oninput="setItem(${i},'unit',this.value)"></td>
+      <td><input type="number" min="0" step="1" style="text-align:right" value="${esc(it.qty)}" oninput="setItem(${i},'qty',this.value)"></td>
+      <td><input value="${esc(it.remark)}" placeholder="选填" oninput="setItem(${i},'remark',this.value)"></td>
+      <td class="ct"><button class="btn sm dan" onclick="delItem(${i})" title="删除该行">×</button></td></tr>`;
+  }).join('');
+}
+function itemQtyTotal(){return formItems.reduce(function(a,b){return a+(parseFloat(b.qty)||0);},0);}
+function setItem(i,f,v){formItems[i][f]=v;if(f==='qty')updItemSum();}
+function updItemSum(){
+  var a=$('itemQtySum'),b=$('itemN');
+  if(a)a.textContent=(Math.round(itemQtyTotal()*100)/100);
+  if(b)b.textContent=formItems.length;
+}
+function addItem(){formItems.push({name:'',spec:'',unit:'套',qty:1,remark:''});renderItems();}
+function delItem(i){
+  if(formItems.length<=1){setFlash('o','至少保留一行。若确实无法拆分，就写一行「整机」并报总价。');return;}
+  formItems.splice(i,1);renderItems();
+}
+function renderItems(){
+  var b=$('itemBody');if(!b)return;
+  b.innerHTML=itemRows();updItemSum();
+}
+function rForm(){
+  const d=DEF(editingId), isEdit=!!d;
+  const v=k=>d?(d[k]==null?'':d[k]):'';
+  const certs=d?(d.certs||[]):['NDA'];
+  return flashHtml()+`
+  <div class="card"><div class="card-h"><h3>${isEdit?'编辑需求 · '+d.id:'新建需求'}</h3>
+    <div class="sub">整机 / 构配件 / 来图加工 共用这一张表</div>
+    <div class="r"><button class="btn" onclick="go('list')">取消</button></div></div>
+  <div class="card-b">
+    <div class="alert b"><i>!</i><div><b>只填 12 项，其中 9 项必填。</b>
+      「关键规格」三项直接决定匹配档位 —— 尺寸超出即判「不符」，这是唯一硬门槛。</div></div>
+    <div class="grid g2">
+      <div class="fg"><label>需求标题<span class="req">*</span></label>
+        <input data-k="title" type="text" value="${esc(v('title'))}" placeholder="如：六工位转盘式装配机（研发样机）"></div>
+      <div class="fg"><label>交付地点<span class="req">*</span></label>
+        <input data-k="place" type="text" value="${esc(v('place'))}" placeholder="苏州"></div>
+    </div>
+    <div class="fg"><label>需求描述<span class="req">*</span></label>
+      <textarea data-k="desc" placeholder="做什么用、用在哪个项目">${esc(v('desc'))}</textarea></div>
+    <div class="fg"><label>设备主要构件清单<span class="req">*</span>
+      <span class="op">你只填名称/规格/数量 —— 单价、小计、合价由供应商扫码填写</span></label>
+      <table class="itab">
+        <thead><tr><th style="width:32px" class="ct">序</th><th>构件名称<span class="req">*</span></th>
+          <th>规格 / 技术要求<span class="req">*</span></th><th style="width:58px">单位</th>
+          <th style="width:70px" class="ct">数量<span class="req">*</span></th><th>备注</th>
+          <th style="width:34px" class="ct"></th></tr></thead>
+        <tbody id="itemBody">${itemRows()}</tbody>
+        <tfoot><tr><td colspan="4" style="text-align:right">数量合计</td>
+          <td class="ct" id="itemQtySum">${Math.round(itemQtyTotal()*100)/100}</td>
+          <td colspan="2" class="sm mut">共 <span id="itemN">${formItems.length}</span> 项</td></tr></tfoot>
+      </table>
+      <div class="flex" style="margin-top:7px">
+        <button class="btn sm" onclick="addItem()">+ 添加构件</button>
+        <span class="sm mut">清单越细报价越可比；拆不出明细时，就写一行「整机」让对方报总价</span></div>
+    </div>
+    <div class="fg"><label>关键规格<span class="req">*</span>
+      <span class="op">三项都要填，对应判定 R1 能力边界</span></label>
+      <div class="grid g3">
+        <div><input data-k="size" type="text" value="${esc(v('size'))}" placeholder="最大尺寸 长×宽×高 mm">
+          <div class="hint">如 3500×2500×2200</div></div>
+        <div><input data-k="acc" type="number" step="0.001" value="${esc(v('acc'))}" placeholder="精度 mm">
+          <div class="hint">如 0.05（=±0.05mm）</div></div>
+        <div><input data-k="cycle" type="number" step="0.1" value="${esc(v('cycle'))}" placeholder="节拍 s/件">
+          <div class="hint">无节拍要求填 0</div></div>
+      </div></div>
+    <div class="grid g4">
+      <div class="fg"><label>数量<span class="req">*</span></label>
+        <input data-k="qty" type="number" value="${esc(v('qty'))}" placeholder="1"></div>
+      <div class="fg"><label>期望交期<span class="req">*</span></label>
+        <input data-k="delivery" type="date" value="${esc(v('delivery'))}"></div>
+      <div class="fg"><label>预算（万元）<span class="req">*</span></label>
+        <input data-k="budget" type="number" value="${esc(v('budget'))}" placeholder="150">
+        <div class="hint">本批的心理价位，用于判定 R4（厂量级是否匹配）</div></div>
+      <div class="fg"><label>报价截止时间<span class="req">*</span></label>
+        <input data-k="deadline" type="text" value="${esc(v('deadline'))}" placeholder="2026-09-28 17:00"></div>
+    </div>
+    <div class="fg"><label>资质要求<span class="req">*</span>
+      <span class="op">对应判定 R3，厂缺任一项即落「可联系」</span></label>
+      <div class="chk">${CERT_KEYS.map(c=>
+        `<label class="${certs.indexOf(c)>=0?'on':''}"><input type="checkbox" data-c="${c}" ${certs.indexOf(c)>=0?'checked':''}
+          onchange="this.parentNode.classList.toggle('on',this.checked)">${CERT_LABEL[c]}</label>`).join('')}</div></div>
+    <div class="fg"><label>验收标准<span class="op">选填 · 整机建议填</span></label>
+      <textarea data-k="acceptance" placeholder="连续运行 72h 无故障；节拍达标；良率≥99.5%">${esc(v('acceptance'))}</textarea></div>
+    <div class="fg"><label>图纸附件<span class="op">选填 · 仅平台内存档，不下发给扫码页</span></label>
+      <input type="file" multiple onchange="pickFiles(this)">
+      <div class="hint">研发早期常无定稿图纸，可先发布摸底。图纸需签 NDA 后单独提供。</div>
+      <div id="fileList" class="sm" style="margin-top:5px"></div></div>
+    <div class="fg"><label>备注<span class="op">选填</span></label>
+      <input data-k="note" type="text" value="${esc(v('note'))}" placeholder=""></div>
+    <hr class="sp">
+    <div class="flex">
+      <button class="btn pri" onclick="saveDemand(0)">${isEdit?'保存修改':'保存并发布'}</button>
+      <button class="btn" onclick="saveDemand(1)">存为草稿</button>
+      <span class="sm mut">保存后进入「询价单」页生成二维码，微信转发即可</span>
+    </div>
+  </div></div>`;
+}
+function pickFiles(inp){
+  pendingFiles=Array.from(inp.files||[]).map(f=>f.name);
+  const el=$('fileList');
+  if(el)el.innerHTML=pendingFiles.length?'已选择 <b>'+pendingFiles.length+'</b> 份：'+esc(pendingFiles.join('、')):'';
+}
+function formVal(k){
+  const el=document.querySelector('[data-k="'+k+'"]');
+  return el?el.value.trim():'';
+}
+function saveDemand(draft){
+  const title=formVal('title');
+  const need=['title','desc','size','acc','cycle','qty','delivery','budget','place','deadline'];
+  const miss=[];
+  need.forEach(k=>{ if(!formVal(k)) miss.push({title:'需求标题',desc:'需求描述',size:'关键规格·尺寸',
+    acc:'关键规格·精度',cycle:'关键规格·节拍',qty:'数量',delivery:'期望交期',
+    budget:'预算',place:'交付地点',deadline:'报价截止时间'}[k]); });
+  const certs=CERT_KEYS.filter(c=>{const el=document.querySelector('[data-c="'+c+'"]');return el&&el.checked;});
+  if(!certs.length)miss.push('资质要求（至少勾一项，或明确无要求）');
+  /* 构件清单：名称/规格/数量必填，否则供应商无从报价 */
+  const items=formItems.map(function(it){
+    return {name:String(it.name||'').trim(),spec:String(it.spec||'').trim(),
+      unit:String(it.unit||'套').trim()||'套',qty:parseFloat(it.qty)||0,remark:String(it.remark||'').trim()};
+  }).filter(function(it){return it.name;});
+  if(!items.length)miss.push('构件清单（至少填一项的名称）');
+  items.forEach(function(it,i){
+    if(!it.spec)miss.push('构件清单第 '+(i+1)+' 项的规格');
+    if(!(it.qty>0))miss.push('构件清单第 '+(i+1)+' 项的数量');
+  });
+  if(miss.length){
+    setFlash('r','<b>还有必填项没填：</b>'+miss.join('、')+'。可以先「存为草稿」。');
+    go('form');return;
+  }
+  const old=editingId?DM(editingId):null;
+  const d=old?Object.assign({},old):{id:'',status:'草稿'};
+  Object.assign(d,{
+    title:title||'未命名需求',desc:formVal('desc'),size:formVal('size'),
+    acc:num(formVal('acc')),cycle:num(formVal('cycle'))||0,qty:num(formVal('qty'))||1,
+    delivery:formVal('delivery'),budget:num(formVal('budget'))||0,
+    place:formVal('place'),deadline:formVal('deadline'),certs:certs,
+    acceptance:formVal('acceptance'),note:formVal('note'),drawings:pendingFiles.slice(),
+    items:items
+  });
+  const oldItems=(old&&old.items)?JSON.parse(JSON.stringify(old.items)):[];
+  if(!old){d.id=nextId();DEMANDS.unshift(d);}
+  else{const i=DEMANDS.indexOf(old);DEMANDS[i]=d;}
+  /* 构件清单变了 → 已收报价按构件名称重新对齐，新增项留空待补 */
+  const sig=a=>a.map(x=>x.name+'|'+x.qty).join('@@');
+  const changed=old&&sig(oldItems)!==sig(items);
+  const shifted=changed?realignQuotes(d,oldItems):0;
+  if(!draft&&(d.status==='草稿'))d.status='询价中';
+  if(draft)d.status='草稿';
+  curDemand=d.id;editingId=null;pendingFiles=[];
+  let msg='<b>需求 '+d.id+' 已保存。</b>共 '+items.length+' 项构件。下一步：生成询价单二维码转发微信。';
+  if(shifted)msg+='　<span style="color:#b45309">构件清单已变更，'+shifted+' 份已收报价按构件名称重新对齐；新增构件对方尚未报价，需通知补报。</span>';
+  setFlash(shifted?'o':'g',msg);
+  go('invite');
+}
+/* 清单变更后：旧报价明细按构件名称搬运到新序号，对不上的留空 */
+function realignQuotes(d,oldItems){
+  let n=0;
+  quotesOf(d.id).forEach(function(q){
+    if(!q.items||!q.items.length)return;
+    const priceOf=name=>{
+      const k=oldItems.findIndex(x=>x.name===name);
+      if(k<0)return null;
+      const it=(q.items||[]).find(x=>x.i===k);
+      return it?it.price:null;
+    };
+    let lost=0;
+    const ni=(d.items||[]).map(function(it,i){
+      const p=priceOf(it.name);
+      if(p==null)lost++;
+      return {i:i,price:p};
+    });
+    if(lost)n++;
+    q.items=ni;
+  });
+  return n;
+}
+function nextId(){
+  const ns=DEMANDS.map(d=>parseInt(String(d.id).replace(/\D/g,''),10)).filter(n=>!isNaN(n));
+  return 'D-2026-'+String((Math.max.apply(null,ns.concat([0]))+1)).padStart(3,'0');
+}
+
+/* ---- 构件清单表（view=只读 / fill=供应商填单价） ---- */
+function itemTable(d,mode,q){
+  const fill=mode==='fill';
+  const items=(d&&d.items)?d.items:[];
+  const rows=items.map(function(it,i){
+    const it2=(q&&q.items)?(q.items.filter(function(x){return x.i===i;})[0]||{}):{};
+    const p=it2.price;
+    const sub=p==null?null:Math.round((Number(p)||0)*(Number(it.qty)||0));
+    return `<tr>
+      <td class="ct mut">${i+1}</td>
+      <td><div class="b">${esc(it.name)}</div><div class="sp2">${esc(it.spec)}</div>
+        ${it.remark?`<div class="sp2">备注：${esc(it.remark)}</div>`:''}</td>
+      <td class="ct">${esc(it.unit)}<div class="sp2">×${esc(it.qty)}</div></td>
+      <td class="num">${fill
+        ? `<input id="qi_${i}" type="number" min="0" step="1" inputmode="numeric" placeholder="0" oninput="calcS1()">`
+        : (p==null?'<span class="na">待填</span>'
+            :(Number(p)===0?'<span class="high">0</span>':fmt(Number(p))))}</td>
+      <td class="num"${fill?' id="qs_'+i+'"':''}>${fill?'<span class="na">—</span>'
+        :(sub==null?'<span class="na">—</span>':fmt(sub))}</td></tr>`;
+  }).join('');
+  return `<table class="itab"><thead><tr>
+      <th class="ct" style="width:24px">序</th><th>构件名称 / 规格</th>
+      <th class="ct" style="width:56px">单位·数量</th>
+      <th class="num" style="width:${fill?76:74}px">单价(元)</th>
+      <th class="num" style="width:${fill?68:74}px">小计(元)</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="4" style="text-align:right">合价（尚未折算含税/运费等口径）</td>
+      <td class="num"${fill?' id="q_sum"':''}>${fill?'<span class="na">—</span>':(q?fmt(Math.round(quoteBase(q))):'—')}</td>
+    </tr></tfoot></table>`;
+}
+/* 供应商逐行填单价时实时算小计与合价 */
+function calcS1(){
+  const d=DM(s1Demand);if(!d)return 0;
+  let sum=0;
+  (d.items||[]).forEach(function(it,i){
+    const el=$('qi_'+i),sub=$('qs_'+i);
+    const raw=el?String(el.value).trim():'';
+    const p=parseFloat(raw);
+    const has=raw!==''&&!isNaN(p);
+    if(has)sum+=p*(Number(it.qty)||0);
+    if(sub)sub.innerHTML=has?fmt(Math.round(p*(Number(it.qty)||0))):'<span class="na">—</span>';
+  });
+  const s=$('q_sum');
+  if(s)s.innerHTML=sum?('<b>'+fmt(Math.round(sum))+'</b>'):'<span class="na">—</span>';
+  return sum;
+}
+
+/* ======================= P3 询价单（二维码） ======================= */
+function rInvite(){
+  const d=DM(curDemand);
+  if(!d)return '<div class="empty">请先选择一个需求</div>';
+  const qrInfo=qrUrlOf(d), url=qrInfo.url;
+  const realScan=!isPlaceholder();
+  /* 链接是否自带需求数据：装得下就「扫码即有表格」，装不下必须改用导出 HTML */
+  const packed=qrInfo.lv>=0;
+  const packedBytes=packed?new Blob([url]).size:0;
+  let qrVer='';
+  let qr;
+  try{ const r=QR.encode(url); qr=QR.svg(url); qrVer=r.ver; }   /* 不传 scale：按版本自适应尺寸 */
+  catch(e){ qr='<div style="width:180px;height:180px;display:flex;align-items:center;justify-content:center;'
+    +'border:1px dashed var(--bd);color:var(--mut);font-size:12px">'+esc(e.message)+'</div>'; }
+  const packTip=packed
+    ? '<b style="color:var(--ok)">✓ 链接自带需求数据</b>（'+packedBytes+' 字节 / 二维码 v'+qrVer
+      +(qrInfo.lv>0?'，已自动压缩为'+(qrInfo.lv===1?'精简':'极简')+'摘要':'')
+      +'）：手机扫码后<b>不依赖服务器</b>，直接显示构件报价表。'
+      +(qrInfo.lv>0?'<br>压缩只影响摘要文字长度，<b>构件项数与数量不丢</b>；'
+        +'如需完整规格说明，请用下方「导出询价页 HTML」。':'')
+    : '<b style="color:var(--wn)">⚠ 需求内容超出可扫范围（二维码需 ≤ v'+PACK_MAXVER
+      +'）</b>，本码只带需求号，手机端会取不到需求内容。'
+      +'<br>请用下方 <b>「导出询价页 HTML」</b>：把导出的页面放到任意静态空间（或微信直接发文件），'
+      +'供应商打开就能看到完整报价表。';
+  const closed=daysLeft(d.deadline.slice(0,10))<0||d.closed;
+  return flashHtml()+`
+  <div class="stepdot">
+    ${[['填写需求单',1],['生成询价单',1],['微信转发',0],['供应商扫码报价',0],['到手总价比价',0]]
+      .map(function(s,i){return '<div class="s '+(s[1]?'done':(i===2?'on':''))+'"><span class="n">'+(s[1]?'✓':i+1)+'</span>'+s[0]+'</div>'+(i<4?'<div class="ar"></div>':'');}).join('')}
+  </div>
+  <div class="card"><div class="card-h"><h3>询价单 · ${d.id}</h3>
+    <div class="sub">${esc(d.title)}</div>
+    <div class="r">${closed?'<span class="tag r">已关闭填写</span>'
+      :'<button class="btn sm dan" onclick="closeInvite()">提前关闭</button>'}</div></div>
+  <div class="card-b">
+    <div class="qrw">
+      <div class="qrbox">
+        <div style="font-size:12px;color:var(--tx2);font-weight:600;margin-bottom:8px">微信扫一扫填报价</div>
+        ${qr}
+        <div class="cap">一单通用码 · 谁扫谁填 · 免注册</div>
+        <div class="lnk"><input id="lnk" type="text" value="${esc(url)}" readonly>
+          <button class="btn sm" onclick="copyLnk()">复制</button></div>
+        <div class="sitebox">
+          <div class="t">扫码链接前缀（部署后填真实公网域名）</div>
+          <div class="rw">
+            <input id="siteInp" type="text" value="${esc(siteBase())}" placeholder="https://rd.yourcompany.com">
+            <button class="btn sm" onclick="saveSite()">保存并重画</button>
+          </div>
+          <div class="tip">${realScan
+            ? '二维码内容 = 前缀 + <b>?p=s1&amp;d='+esc(d.id)+'</b>'+(packed?'<b>&amp;x=需求数据</b>':'')
+              +'；手机扫码后直接打开右侧这张构件报价表。'
+            : '<b style="color:var(--wn)">当前是本地文件 / 占位域名，手机扫了打不开页面。</b>原型部署到公网后，把域名填到这里点保存，二维码即真实可用；也可先点下方「本机打开扫码页」验证页面形态。'}</div>
+        </div>
+        <div class="alert ${packed?'g':'o'}" style="margin-top:9px;text-align:left;font-size:11.5px;padding:8px 10px">
+          <i>${packed?'✓':'!'}</i><div>${packTip}</div></div>
+        <div style="margin-top:9px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+          <button class="btn sm" onclick="openScan()">本机打开扫码页</button>
+          <button class="btn sm" onclick="go('s1')">页内预览</button>
+          <button class="btn sm pri" onclick="exportInviteHtml()">导出询价页 HTML</button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:300px">
+        <h4 style="font-size:13px;margin-bottom:8px">扫码页展示的需求摘要（文字版）</h4>
+        <div class="psec" style="background:#f8fafc">
+          <div class="kv"><span class="k">标题</span><span class="v b">${esc(d.title)}</span></div>
+          <div class="kv"><span class="k">描述</span><span class="v">${esc(d.desc)}</span></div>
+          <div class="kv"><span class="k">关键规格</span><span class="v">尺寸 ${esc(d.size)} mm · 精度 ±${d.acc} mm${d.cycle?' · 节拍 '+d.cycle+' s/件':''}</span></div>
+          <div class="kv"><span class="k">数量</span><span class="v">${d.qty}</span></div>
+          <div class="kv"><span class="k">交期</span><span class="v">${esc(d.delivery)}（剩 ${daysLeft(d.delivery)} 天）</span></div>
+          <div class="kv"><span class="k">预算</span><span class="v">${d.budget} 万元</span></div>
+          <div class="kv"><span class="k">交付地</span><span class="v">${esc(d.place)}</span></div>
+          <div class="kv"><span class="k">资质</span><span class="v">${d.certs.length?d.certs.map(c=>CERT_LABEL[c]).join('、'):'未指定'}</span></div>
+          ${d.acceptance?`<div class="kv"><span class="k">验收</span><span class="v">${esc(d.acceptance)}</span></div>`:''}
+          <div class="kv"><span class="k">截止</span><span class="v b">${esc(d.deadline)}</span></div>
+        </div>
+        <h4 style="font-size:13px;margin:12px 0 7px">供应商扫码后要填的表（逐行报单价）</h4>
+        ${itemTable(d,'view')}
+        <div class="sm mut" style="margin-top:6px">
+          以上 <b>${(d.items||[]).length}</b> 项由你发布时定义；<b>单价、小计、合价由供应商填写</b>，
+          系统自动计算 —— 你不用报价，也不用填单价。</div>
+        <div class="alert o" style="margin-bottom:8px"><i>!</i><div>
+          <b>图纸不下发。</b>扫码页只显示以上文字内容，并写明「图纸需签 NDA 后单独提供」。
+          平台内已存档 ${d.drawings.length} 份：${d.drawings.length?esc(d.drawings.join('、')):'—'}</div></div>
+        <div class="alert b" style="margin-bottom:0"><i>!</i><div>
+          <b>通用码的代价：</b>无法知道「发了 8 家、谁还没填」，只能看到已收 <b>${quotesOf(d.id).length}</b> 份报价。
+          若需要催办，得改成一厂一码（v2 再议）。</div></div>
+        <div class="alert b" style="margin:8px 0 0"><i>!</i><div>
+          <b>供应商提交后怎么回到你这里？</b>原型没有服务器，手机上的提交回不来。
+          供应商提交后会生成一段<b>回传码</b>，微信发给你；你在「询价比价」页点
+          <b>「粘贴导入报价」</b>即可入库比价（也可直接让他把金额打在微信里，你手动补一份）。</div></div>
+      </div>
+    </div>
+    <hr class="sp">
+    <div class="flex">
+      <button class="btn pri" onclick="go('quote')">查看已收报价（${quotesOf(d.id).length}）</button>
+      <button class="btn" onclick="curDemand='${d.id}';go('match')">先看候选厂匹配</button>
+      <button class="btn" onclick="openScan()">打开扫码页（供应商看到的形态）</button>
+      <button class="btn pri" onclick="exportInviteHtml()">导出询价页 HTML（扫码 100% 有效）</button>
+      <span class="sm mut">部署说明：S1 需要公网域名，是本项目唯一必须联网的部分；二维码扫出来就是上面那张逐项报价表</span>
+    </div>
+  </div></div>`;
+}
+function copyLnk(){
+  const el=$('lnk');if(!el)return;
+  el.select();
+  try{document.execCommand('copy');setFlash('g','链接已复制，可直接粘贴到微信。');go('invite');}
+  catch(e){alert('请手动复制：'+el.value);}
+}
+/* 保存公网域名 → 二维码按新前缀重画 */
+function saveSite(){
+  const el=$('siteInp');if(!el)return;
+  let v=String(el.value||'').trim().replace(/\/+$/,'');
+  if(v&&!/^https?:\/\//i.test(v))v='https://'+v;
+  lsSet('rd_site',v);
+  setFlash(v?'g':'o', v?('扫码前缀已保存为 <b>'+esc(v)+'</b>，二维码已按新域名重画，手机扫了能直接打开报价表。')
+                      :'已清除自定义前缀，恢复默认（占位域名）。');
+  go('invite');
+}
+/* 新窗口打开扫码页（本机也能打开，用来验证扫码后看到的页面） */
+function openScan(){
+  const d=DM(curDemand);if(!d)return;
+  window.open(selfUrl(d),'_blank');
+}
+function closeInvite(){
+  const d=DM(curDemand);if(!d)return;
+  d.closed=true;d.status='已定标';
+  setFlash('o','询价单已提前关闭，供应商无法再提交。需求状态置为「已定标」。');go('invite');
+}
+
+/* ======================= 报价回传码（无后端的闭环） =======================
+   原型没有服务器，供应商在手机上提交的报价回不到研发电脑。
+   做法：提交后生成一段「回传码」文本（RDQ1.xxxx），供应商复制后微信发回，
+   研发在 P5 询价比价页点「粘贴导入报价」一键入库。                        */
+const b64enc=s=>btoa(unescape(encodeURIComponent(s)));
+const b64dec=s=>decodeURIComponent(escape(atob(s)));
+function quoteCode(q){
+  const o={v:1,did:q.did,co:q.company,ct:q.contact,ph:q.phone,
+    it:(q.items||[]).map(x=>[x.i,x.price==null?'':x.price]),
+    ti:q.taxIncluded?1:0,tr:q.taxRate||13,
+    fi:q.freightIncluded?1:0,fr:q.freight||0,
+    ii:q.installIncluded?1:0,inf:q.installFee||0,
+    di:q.designIncluded?1:0,df:q.designFee||0,
+    si:q.trialIncluded?1:0,sf:q.trialFee||0,
+    ld:q.leadDays||0,wa:q.warranty||12,vd:q.validDays||30,
+    dv:q.deviation||'',nt:q.note||''};
+  return 'RDQ1.'+b64enc(JSON.stringify(o));
+}
+/* 解析回传码 → 报价对象；失败返回 {error:'…'} */
+function parseQuoteCode(text){
+  const t=String(text||'').trim().replace(/\s+/g,'');
+  if(t.indexOf('RDQ1.')!==0)return {error:'不是有效的回传码（应以 RDQ1. 开头）'};
+  let o;
+  try{o=JSON.parse(b64dec(t.slice(5)));}
+  catch(e){return {error:'回传码解析失败，可能被截断或复制不全。请让供应商重新复制完整的一段。'};}
+  if(!o||o.v!==1||!o.did)return {error:'回传码版本不匹配或缺少需求号'};
+  if(!DEMANDS.some(x=>x.id===o.did))return {error:'回传码里的需求号 '+o.did+' 不在本平台需求列表中'};
+  return {q:{
+    did:o.did,company:o.co||'',contact:o.ct||'',phone:o.ph||'',
+    items:(o.it||[]).map(a=>({i:Number(a[0])||0,price:a[1]===''||a[1]==null?null:Number(a[1])})),
+    taxIncluded:!!o.ti,taxRate:Number(o.tr)||13,
+    freightIncluded:!!o.fi,freight:Number(o.fr)||0,
+    installIncluded:!!o.ii,installFee:Number(o.inf)||0,
+    designIncluded:!!o.di,designFee:Number(o.df)||0,
+    trialIncluded:!!o.si,trialFee:Number(o.sf)||0,
+    leadDays:Number(o.ld)||0,warranty:Number(o.wa)||12,validDays:Number(o.vd)||30,
+    deviation:o.dv||'',note:o.nt||'',at:TODAY
+  }};
+}
+/* P5 导入：粘贴回传码 → 入库（陌生公司标「待核实」） */
+function openImport(){
+  $('dwT').textContent='粘贴导入供应商报价';
+  $('dwB').innerHTML=`
+    <div class="alert b" style="margin-bottom:10px"><i>!</i><div>
+      把供应商微信发回的那段<b>回传码</b>（以 <span class="mono">RDQ1.</span> 开头）整段粘贴进来，
+      点导入即进入比价表。同一家公司重复导入会覆盖上一次。</div></div>
+    <div class="fg"><label>回传码<span class="req">*</span></label>
+      <textarea id="imp_code" style="min-height:96px;font-family:Consolas,Monaco,monospace;font-size:11.5px"
+        placeholder="RDQ1.eyJ2IjoxLCJkaWQiOiJE…"></textarea></div>
+    <div id="imp_msg"></div>
+    <div class="flex" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="closeDw()">取消</button>
+      <button class="btn pri" onclick="doImport()">导入并进入比价</button></div>`;
+  $('mask').classList.add('on');$('dw').classList.add('on');
+}
+function doImport(){
+  const el=$('imp_code'),msg=$('imp_msg');if(!el)return;
+  const r=parseQuoteCode(el.value);
+  if(r.error){msg.innerHTML='<div class="alert r"><i>!</i><div>'+esc(r.error)+'</div></div>';return;}
+  const q=r.q;
+  q.status=SUPPLIERS.some(s=>s.name===q.company)?'已确认':'待核实';
+  const dup=QUOTES.find(x=>x.did===q.did&&x.phone===q.phone&&x.phone);
+  if(dup){Object.assign(dup,q);}
+  else{q.id='Q'+String(QUOTES.length+1).padStart(3,'0');QUOTES.push(q);}
+  closeDw();
+  curDemand=q.did;
+  setFlash('g','已导入 <b>'+esc(q.company)+'</b> 的报价（'+q.status+'），到手总价 '
+    +fmt(Math.round(landed(q)))+' 元。'+(dup?'（覆盖了同一手机号的上一次报价）':''));
+  go('quote');
+}
+
+/* ======================= 导出独立询价页（一页一需求，扫码 100% 有效） ====
+   原型没有后端，需求数据只存在于研发本机。把这一页导出成单文件 HTML 放到
+   任意静态空间（内网服务器 / GitHub Pages / 对象存储），二维码指向它，
+   供应商扫码就能看到完整需求 —— 不再依赖「服务器里有没有这条需求」。      */
+function invitePageHtml(d){
+  const css=(document.querySelector('style')||{textContent:''}).textContent;
+  const data={id:d.id,title:d.title,desc:d.desc,size:d.size,acc:d.acc,cycle:d.cycle,qty:d.qty,
+    delivery:d.delivery,budget:d.budget,place:d.place,
+    deadline:d.deadline,acceptance:d.acceptance||'',certs:d.certs||[],
+    items:(d.items||[]).map(it=>({name:it.name,spec:it.spec||'',unit:it.unit||'',qty:it.qty}))};
+  const JS=[
+'var D='+JSON.stringify(data)+';',
+'function $(i){return document.getElementById(i);}',
+'function fmt(n){return Number(n).toLocaleString("zh-CN",{maximumFractionDigits:2});}',
+'function num(v){var x=parseFloat(v);return isNaN(x)?null:x;}',
+'function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c];});}',
+'function b64(s){return btoa(unescape(encodeURIComponent(s)));}',
+'function calc(){var sum=0;for(var i=0;i<D.items.length;i++){var el=$("qi_"+i),sub=$("qs_"+i);',
+'  var raw=el?String(el.value).trim():"",p=parseFloat(raw),has=raw!==""&&!isNaN(p);',
+'  if(has)sum+=p*(Number(D.items[i].qty)||0);',
+'  if(sub)sub.innerHTML=has?fmt(Math.round(p*(Number(D.items[i].qty)||0))):"<span class=\\"na\\">—</span>";}',
+'  var s=$("q_sum");if(s)s.innerHTML=sum?fmt(Math.round(sum)):"<span class=\\"na\\">—</span>";',
+'  $("sumTip").innerHTML="合价 <b>"+fmt(Math.round(sum))+"</b> 元（尚未折算含税/运费等口径）";',
+'  return sum;}',
+'function submit(){var msg=$("msg");',
+'  var need={q_company:"公司名称",q_contact:"联系人",q_phone:"手机号",q_lead:"交货周期",q_warranty:"质保",q_valid:"报价有效期",q_dev:"偏离说明"};',
+'  var miss=[],blank=[];for(var k in need){var el=$(k);if(!el||!String(el.value).trim())miss.push(need[k]);}',
+'  var items=[];for(var i=0;i<D.items.length;i++){var el=$("qi_"+i),raw=el?String(el.value).trim():"";',
+'    if(raw==="")blank.push("第"+(i+1)+"项「"+D.items[i].name+"」");',
+'    items.push([i,raw===""?"":(parseFloat(raw)||0)]);}',
+'  if(miss.length||blank.length){msg.innerHTML="<div class=\\"alert r\\"><i>!</i><div>"',
+'    +(miss.length?"请填写："+miss.join("、"):"")',
+'    +(blank.length?(miss.length?"<br>":"")+"单价未填："+blank.join("、")+"<br>不做该项请填 0，不要留空":"")+"</div></div>";return;}',
+'  var o={v:1,did:D.id,co:$("q_company").value.trim(),ct:$("q_contact").value.trim(),ph:$("q_phone").value.trim(),',
+'   it:items,ti:$("q_tax").value==="1"?1:0,tr:num($("q_taxrate").value)||13,',
+'   fi:$("q_freight").value==="1"?1:0,fr:num($("q_freightfee").value)||0,',
+'   ii:$("q_install").value==="1"?1:0,inf:num($("q_installfee").value)||0,',
+'   di:$("q_design").value==="1"?1:0,df:num($("q_designfee").value)||0,',
+'   si:$("q_trial").value==="1"?1:0,sf:num($("q_trialfee").value)||0,',
+'   ld:num($("q_lead").value)||0,wa:num($("q_warranty").value)||12,vd:num($("q_valid").value)||30,',
+'   dv:$("q_dev").value.trim(),nt:$("q_note").value.trim()};',
+'  var code="RDQ1."+b64(JSON.stringify(o));',
+'  $("msg").innerHTML="<div class=\\"alert g\\"><i>✓</i><div>提交成功，合价 <b>"+fmt(Math.round(calc()))+"</b> 元。</div></div>";',
+'  $("box").style.display="";$("code").value=code;',
+'  window.scrollTo(0,document.body.scrollHeight);}',
+'function copyCode(){var el=$("code");el.select();',
+'  try{document.execCommand("copy");$("copyTip").innerHTML="<b style=\\"color:var(--ok)\\">已复制</b>，粘贴到微信发给研发即可。";}',
+'  catch(e){$("copyTip").innerHTML="复制失败，请手动全选复制。";}}',
+'function init(){',
+'  var h="";for(var i=0;i<D.items.length;i++)h+=rows4(i);',
+'  $("tbody").innerHTML=h;calc();',
+'  ["q_tax","q_freight","q_install","q_design","q_trial"].forEach(function(k){',
+'    var el=$(k);if(el)el.onchange=function(){var w=$(k+"_w");if(w)w.style.display=this.value==="0"?"":"none";};});}',
+'function rows4(i){var it=D.items[i];',
+'  return "<tr><td class=\\"ct mut\\">"+(i+1)+"</td><td><div class=\\"b\\">"+esc(it.name)+"</div>"',
+'   +(it.spec?"<div class=\\"sp2\\">"+esc(it.spec)+"</div>":"")+"</td>"',
+'   +"<td class=\\"ct\\">"+esc(it.unit)+"<div class=\\"sp2\\">×"+esc(it.qty)+"</div></td>"',
+'   +"<td class=\\"num\\"><input id=\\"qi_"+i+"\\" type=\\"number\\" min=\\"0\\" step=\\"1\\" inputmode=\\"numeric\\" placeholder=\\"0\\" oninput=\\"calc()\\"></td>"',
+'   +"<td class=\\"num\\" id=\\"qs_"+i+"\\"><span class=\\"na\\">—</span></td></tr>";}',
+'init();'
+  ].join('\n');
+  const items=data.items;
+  const head=[
+'<!DOCTYPE html>','<html lang="zh-CN"><head>','<meta charset="utf-8">',
+'<meta name="viewport" content="width=device-width,initial-scale=1">',
+'<title>询价单报价 · '+esc(data.id)+'</title>','<style>'+css+'</style>',
+'<style>body{margin:0;background:#f1f5f9}.wrap{max-width:520px;margin:0 auto;padding:12px}',
+'.ttl{background:#0f172a;color:#fff;padding:12px 14px;font-size:14px;font-weight:600}',
+'.ttl span{display:block;font-weight:400;font-size:11.5px;opacity:.7;margin-top:3px}</style>',
+'</head><body>','<div class="ttl">询价单报价<span>'+esc(data.id)+' · 免注册 · 填完把回传码发回研发</span></div>',
+'<div class="wrap">',
+'  <div class="card" style="margin-bottom:12px"><div class="card-h"><h3>'+esc(data.title)+'</h3>',
+'    <div class="sub">'+esc(data.place)+' · 报价截止 '+esc(data.deadline)+'</div></div>',
+'  <div class="card-b"><div class="psec">',
+'    <div class="kv"><span class="k">描述</span><span class="v">'+esc(data.desc)+'</span></div>',
+'    <div class="kv"><span class="k">关键规格</span><span class="v">尺寸 '+esc(data.size)+' mm · 精度 ±'+esc(data.acc)+' mm'
+      +(data.cycle?' · 节拍 '+esc(data.cycle)+' s/件':'')+'</span></div>',
+'    <div class="kv"><span class="k">数量</span><span class="v">'+esc(data.qty)+'</span></div>',
+'    <div class="kv"><span class="k">交期</span><span class="v">'+esc(data.delivery)+'</span></div>',
+'    <div class="kv"><span class="k">预算</span><span class="v">'+esc(data.budget)+' 万元</span></div>',
+      (data.acceptance?'    <div class="kv"><span class="k">验收</span><span class="v">'+esc(data.acceptance)+'</span></div>':''),
+'  </div></div></div>',
+'  <div class="card" style="margin-bottom:12px"><div class="card-h"><h3>填写报价信息</h3></div><div class="card-b">',
+'    <div class="prow"><div class="pfg"><label>公司名称<span class="req">*</span></label><input id="q_company" placeholder="必填"></div>',
+'      <div class="pfg"><label>联系人<span class="req">*</span></label><input id="q_contact" placeholder="必填"></div></div>',
+'    <div class="pfg"><label>手机号<span class="req">*</span></label><input id="q_phone" type="tel" placeholder="用于识别重复提交"></div>',
+'    <div style="font-size:12.5px;font-weight:600;margin:4px 0 7px">按构件逐项报单价</div>',
+'    <table class="itab"><thead><tr><th class="ct" style="width:24px">序</th><th>构件名称 / 规格</th>',
+'      <th class="ct" style="width:56px">单位·数量</th><th class="num" style="width:76px">单价(元)</th>',
+'      <th class="num" style="width:68px">小计(元)</th></tr></thead><tbody id="tbody"></tbody>',
+'      <tfoot><tr><td colspan="4" style="text-align:right">合价</td><td class="num" id="q_sum">—</td></tr></tfoot></table>',
+'    <div class="sm mut" style="margin:6px 0 12px;font-size:11px">单价 × 数量 = 小计，合计自动算出；某项不做请填 0，不要留空。</div>',
+'    <div class="pfg"><label>是否含税<span class="req">*</span></label><select id="q_tax">',
+'      <option value="1">含税</option><option value="0">不含税</option></select>',
+'      <div class="pinline" id="q_tax_w" style="display:none">税率 <input id="q_taxrate" type="number" value="13"> %</div></div>'
+  ];
+  const feeRow=(k,lb,fid)=>
+'    <div class="pfg"><label>是否含'+lb+'<span class="req">*</span></label><select id="q_'+k+'">'
++'<option value="1">含</option><option value="0">不含</option></select>'
++'<div class="pinline" id="q_'+k+'_w" style="display:none">'+lb+'费用 <input id="'+fid+'" type="number" value="0"> 元</div></div>';
+  const tail=[
+    feeRow('freight','运费','q_freightfee'),
+    feeRow('install','安装调试','q_installfee'),
+    feeRow('design','设计费','q_designfee'),
+    feeRow('trial','带料试机','q_trialfee'),
+'    <div class="prow"><div class="pfg"><label>交货周期（天）<span class="req">*</span></label>',
+'      <input id="q_lead" type="number" placeholder="120"></div>',
+'      <div class="pfg"><label>质保（月）<span class="req">*</span></label><input id="q_warranty" type="number" value="12"></div></div>',
+'    <div class="pfg"><label>报价有效期（天）<span class="req">*</span></label><input id="q_valid" type="number" value="30"></div>',
+'    <div class="pfg"><label>偏离说明<span class="req">*</span></label>',
+'      <textarea id="q_dev" placeholder="与技术要求的任何差异；没有就填「无」"></textarea>',
+'      <div class="hint" style="font-size:10.5px">这行最容易藏坑，必填</div></div>',
+'    <div class="pfg"><label>备注<span class="op">选填</span></label><textarea id="q_note" style="min-height:40px"></textarea></div>',
+'    <div id="msg"></div>',
+'    <div id="sumTip" class="sm" style="margin:6px 0 8px">合价 —</div>',
+'    <button class="btn pri" style="width:100%;padding:10px" onclick="submit()">提交报价</button>',
+'    <div class="sm mut" style="text-align:center;margin-top:9px;line-height:1.6">提交后研发会核实身份<br>平台不会公开您的报价给其他供应商</div>',
+'    <div id="box" style="display:none;margin-top:14px;border-top:1px solid var(--bd);padding-top:12px">',
+'      <div class="alert g" style="margin-bottom:8px"><i>✓</i><div><b>请把下面这段回传码发给研发</b>',
+'        （复制后微信发给对接的研发工程师，他会一键导入比价表）</div></div>',
+'      <textarea id="code" readonly style="min-height:80px;font-family:Consolas,Monaco,monospace;font-size:11px"></textarea>',
+'      <div class="flex" style="gap:8px;margin-top:8px"><button class="btn pri" onclick="copyCode()">复制回传码</button>',
+'        <span class="sm mut" id="copyTip"></span></div>',
+'    </div>',
+'  </div></div>',
+'  <div class="alert o"><i>!</i><div><b>图纸需签 NDA 后单独提供。</b>如需查看图纸请联系 '+esc(data.place)+'研发部。</div></div>',
+'</div>',
+'<scr'+'ipt>'+JS+'<'+'/scr'+'ipt>',
+'</body></html>'
+  ];
+  return head.concat(tail).join('\n');
+}
+function exportInviteHtml(){
+  const d=DM(curDemand);if(!d)return;
+  if(!(d.items&&d.items.length)){
+    setFlash('o','该需求还没有构件清单，导出的询价页会没有报价表。请先编辑需求补上构件清单。');
+    go('invite');return;
+  }
+  const html=invitePageHtml(d);
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='询价单_'+d.id+'.html';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
+  setFlash('g','已导出 <b>询价单_'+esc(d.id)+'.html</b>（单文件，含需求与构件清单）。'
+    +'<br>把它放到任意静态空间后，把文件地址填进上方「扫码链接前缀」（或直接把文件发给供应商），'
+    +'供应商打开就能看到报价表，不再依赖服务器里有没有这条需求。');
+  go('invite');
+}
+
+/* ======================= P4 智能匹配 ======================= */
+const GRADE_META={'推荐':['g','ml-g','mc-g','能力边界满足，且接单意愿/资质/预算三项全满足'],
+  '可联系':['b','ml-b','mc-b','能力边界满足，但接单意愿/资质/预算中有一项不满足或未知'],
+  '不符':['r','ml-r','mc-r','能力边界不满足 —— 唯一硬门槛'],
+  '待确认':['gr','ml-u','mc-u','关键字段没填，判不出来，需补录档案']};
+
+/* ======================= 供应商库：只收「推荐」「可联系」 ======================= */
+const LIB_GRADES=['推荐','可联系'];
+const LIB_STATUS=['待联系','已联系','已报价','已合作','已淘汰'];
+const LIB_STAG={'待联系':'gr','已联系':'b','已报价':'o','已合作':'g','已淘汰':'r'};
+const LIB=[
+ {sid:'S001',owner:'张工',status:'已报价',touchAt:'2026-09-20',tags:['整机能力强','可带料试机'],
+  froms:[{did:'D-2026-014',grade:'可联系',at:'2026-09-15'},
+         {did:'D-2026-022',grade:'推荐',at:'2026-09-17'}],
+  notes:[{at:'2026-09-16',txt:'电话沟通，愿意做整机，排产需提前锁定'},
+         {at:'2026-09-20',txt:'报价已到，口径全含，无需折算'},
+         {at:'2026-09-21',txt:'待确认交期能否从 130 天压到 100 天'}]},
+ {sid:'S002',owner:'张工',status:'已报价',touchAt:'2026-09-19',tags:['规模大','排产满'],
+  froms:[{did:'D-2026-014',grade:'可联系',at:'2026-09-15'}],
+  notes:[{at:'2026-09-18',txt:'李工反馈排产紧张，最早 11 月才能启动'}]},
+ {sid:'S003',owner:'张工',status:'已联系',touchAt:'2026-09-19',tags:['价格低'],
+  froms:[{did:'D-2026-014',grade:'推荐',at:'2026-09-15'}],
+  notes:[{at:'2026-09-19',txt:'价格有优势，但报价未含防护罩与安装，需补报'}]},
+ {sid:'S004',owner:'张工',status:'待联系',touchAt:'2026-09-17',tags:['标准品/模组'],
+  froms:[{did:'D-2026-021',grade:'推荐',at:'2026-09-17'}],
+  notes:[{at:'2026-09-17',txt:'直线模组需求（D-2026-021）筛出来的；只做标准品，定制能力弱'}]}
+];
+
+/* ---- 供应商库：数据操作 ---- */
+const libOf=sid=>LIB.filter(x=>x.sid===sid)[0];
+const libQuotes=e=>{const s=SM(e.sid);
+  return s?QUOTES.filter(q=>q.company===s.name&&q.status==='已确认'):[];};
+function libBest(e){
+  const qs=libQuotes(e);
+  return qs.length?Math.min.apply(null,qs.map(q=>Math.round(landed(q)))):null;
+}
+function libCoop(e){return libQuotes(e).map(q=>q.did);}
+/* 最新一次入库时的档位（同一家被多个需求筛中时，取最近一条） */
+function libGrade(e){return e.froms&&e.froms.length?e.froms[e.froms.length-1].grade:'—';}
+/* 已有报价 → 自动提升为「已报价」，不用手工改 */
+function libSyncStatus(e){
+  if(!e||e.status==='已合作'||e.status==='已淘汰')return;
+  if(libQuotes(e).length&&e.status!=='已报价')e.status='已报价';
+}
+/* 把一个需求的匹配结果刷进库：只收推荐/可联系，返回新增家数 */
+function libSync(d){
+  let added=0;
+  SUPPLIERS.forEach(function(s){
+    const g=gradeOf(d,s).grade;
+    if(LIB_GRADES.indexOf(g)<0)return;
+    let e=libOf(s.id);
+    if(!e){e={sid:s.id,owner:'张工',status:'待联系',touchAt:'',tags:[],froms:[],notes:[]};
+      LIB.push(e);added++;}
+    else if(e.status==='已淘汰')return;      /* 已淘汰的不再自动拉回来 */
+    if(!e.tags)e.tags=[]; if(!e.notes)e.notes=[]; if(!e.froms)e.froms=[];
+    const f=e.froms.filter(x=>x.did===d.id)[0];
+    if(f)f.grade=g; else e.froms.push({did:d.id,grade:g,at:TODAY});
+    libSyncStatus(e);
+  });
+  return added;
+}
+function libAdd(sid,did){
+  let e=libOf(sid);
+  if(!e){e={sid:sid,owner:'张工',status:'待联系',touchAt:'',tags:[],froms:[],notes:[]};LIB.push(e);}
+  const d=DM(did);
+  if(d){const g=gradeOf(d,SM(sid)).grade;
+    const f=e.froms.filter(x=>x.did===d.id)[0];
+    if(f)f.grade=g; else e.froms.push({did:d.id,grade:g,at:TODAY});}
+  libSyncStatus(e);
+  setFlash('g','<b>'+esc(SM(sid).name)+'</b> 已加入供应商库。');
+  go(curPage);
+}
+/* 淘汰 = 软删除：不再出现在候选名单，档案与历史记录仍保留 */
+function libExclude(sid){
+  const e=libOf(sid);if(!e)return;
+  e.status='已淘汰';
+  setFlash('o','<b>'+esc(SM(sid).name)+'</b> 已标记「已淘汰」，从候选名单隐藏。<br>档案仍在 P6，入库与报价历史保留 —— 需要时在状态筛选里选「已淘汰」即可找回。');
+  go(curPage);
+}
+function libRestore(sid){
+  const e=libOf(sid);if(!e)return;
+  e.status='待联系';libSyncStatus(e);
+  setFlash('g','<b>'+esc(SM(sid).name)+'</b> 已恢复为候选供应商。');
+  go(curPage);
+}
+function libSetStatus(sid,v){
+  const e=libOf(sid);if(!e)return;
+  e.status=v;
+  e.touchAt=TODAY;                              /* 任何状态变更都算一次接触 */
+  go(curPage);
+}
+function libNote(sid,txt){
+  const e=libOf(sid);if(!e)return;
+  txt=String(txt||'').trim();
+  if(!txt){alert('请输入跟进内容');return;}
+  if(!e.notes)e.notes=[];
+  e.notes.push({at:TODAY,txt:txt});
+  if(e.status==='待联系')e.status='已联系';
+  e.touchAt=TODAY;
+  go(curPage);
+}
+function libExport(){
+  const rows=[['公司','地区','联系人','电话','入库档位','库内状态','来源需求','已确认报价数','最低到手价(元)','最近接触','标签']];
+  LIB.forEach(function(e){
+    const s=SM(e.sid);if(!s)return;
+    rows.push([s.name,s.city,s.contact,s.phone,libGrade(e),e.status,
+      (e.froms||[]).map(f=>f.did+'/'+f.grade).join(' '),
+      libQuotes(e).length,libBest(e)==null?'':libBest(e),e.touchAt||'—',(e.tags||[]).join('、')]);
+  });
+  const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='供应商库_'+TODAY+'.csv';
+  document.body.appendChild(a);a.click();a.remove();
+  setFlash('g','已导出 <b>'+(LIB.length)+'</b> 家，Excel 可直接打开。');
+  go(curPage);
+}
+
+function rMatch(){
+  const d=DM(curDemand);
+  if(!d)return '<div class="empty">请先选择需求</div>';
+  /* 进入匹配页时把「推荐 / 可联系」刷进供应商库 */
+  const added=libSync(d);
+  if(added){
+    const msg='本需求「推荐 / 可联系」共 <b>'+added+'</b> 家新加入供应商库。';
+    if(flash)flash.html=msg+'<br>'+flash.html; else setFlash('g',msg);
+  }
+  const all=SUPPLIERS.map(s=>({s:s,g:gradeOf(d,s)}));
+  const pick=g=>all.filter(x=>x.g.grade===g);
+  const groups=['推荐','可联系','不符','待确认'];
+  return flashHtml()+`
+  <div class="card"><div class="card-h"><h3>匹配需求</h3>
+    <div class="sub">${d.id} · ${esc(d.title)}</div>
+    <div class="r"><select onchange="curDemand=this.value;go('match')" style="width:auto;padding:5px 9px">
+      ${DEMANDS.map(x=>`<option value="${x.id}" ${x.id===d.id?'selected':''}>${x.id} ${esc(x.title).slice(0,16)}</option>`).join('')}
+    </select></div></div>
+  <div class="card-b">
+    <div class="alert b"><i>!</i><div><b>不出分数、不出权重。</b>
+      R1 能力边界是唯一硬门槛：不满足直接「不符」；满足后再看 R2 接单意愿、R3 资质、R4 预算，
+      三项全满足才「推荐」，任一项不满足或未知只落「可联系」。</div></div>
+    <div class="flex" style="gap:9px;align-items:center;flex-wrap:wrap;margin:10px 0 2px">
+      <span class="sm">本需求的 <b style="color:var(--ok)">${pick('推荐').length}</b> 家推荐 +
+        <b style="color:var(--pri)">${pick('可联系').length}</b> 家可联系已自动进供应商库；
+        <span class="mut">不符、待确认不入库。</span></span>
+      <button class="btn sm gb" onclick="go('lib')">去供应商库（${LIB.filter(e=>e.status!=='已淘汰').length} 家）</button>
+    </div>
+    <div class="grid g4" style="margin-bottom:4px">
+      ${groups.map(g=>`<div class="stat"><div class="l">${g}</div>
+        <div class="v" style="color:var(--${GRADE_META[g][0]==='g'?'ok':GRADE_META[g][0]==='b'?'pri':GRADE_META[g][0]==='r'?'er':'gr'})">${pick(g).length}<small>家</small></div>
+        <div class="d" style="font-size:10.5px;line-height:1.4">${GRADE_META[g][3]}</div></div>`).join('')}
+    </div>
+  </div></div>
+  ${groups.map(g=>{
+    const list=pick(g);
+    return `<div class="mcol">
+      <div class="mcol-h ${GRADE_META[g][1]}"><span>${g}</span>
+        <span style="font-weight:400;font-size:11.5px;opacity:.85">${GRADE_META[g][3]}</span>
+        <span class="n">${list.length} 家</span></div>
+      <div class="mc ${GRADE_META[g][2]}">
+      ${list.length?list.map(x=>{
+        const s=x.s,ov=overrides[d.id+'_'+s.id];
+        const le=libOf(s.id);
+        const canLib=LIB_GRADES.indexOf(x.g.grade)>=0;
+        const libTag=!canLib?'<span class="tag gr" style="margin-left:5px">不入库</span>'
+          :le?`<span class="tag ${LIB_STAG[le.status]}" style="margin-left:5px">库 · ${le.status}</span>`
+          :'<span class="tag gr" style="margin-left:5px">未入库</span>';
+        return `<div class="mrow">
+          <div class="info">
+            <h4>${esc(s.name)}${libTag} ${ov?'<span class="tag o" style="margin-left:5px">已手动改档</span>':''}</h4>
+            <div class="meta">${esc(s.city)} · ${esc(s.contact)} ${esc(s.phone)} · 量级 ${s.priceMin}-${s.priceMax} 万/${s.unit}</div>
+            ${ov?`<div class="sm" style="color:var(--wn);margin-top:3px">手动改为「${ov.grade}」，原因：${esc(ov.reason||'未填')}</div>`:''}
+          </div>
+          <div class="rsn">${x.g.R.map(r=>`<div><span class="k">${r.k}</span><span>${
+            r.ok===true?'<span style="color:var(--ok)">✓ 满足</span>':
+            r.ok===false?'<span style="color:var(--er)">✕ 不满足</span>':
+            '<span style="color:var(--gr)">? 未知</span>'} ${r.txt}</span></div>`).join('')}</div>
+          <div class="act">
+            <button class="btn sm" onclick="showSup('${s.id}')">档案</button>
+            ${le?`<button class="btn sm gb" onclick="showLib('${s.id}')">库 · ${le.status}</button>`
+               :(canLib?`<button class="btn sm gb" onclick="libAdd('${s.id}','${d.id}')">加入库</button>`
+                       :'')}
+            <select class="sm" id="ov_${s.id}" style="padding:3px 6px;width:auto">
+              ${['推荐','可联系','不符','待确认'].map(o=>`<option ${o===x.g.grade?'selected':''}>${o}</option>`).join('')}
+            </select>
+            <input class="sm" id="ovr_${s.id}" placeholder="改档原因" value="${esc(ov?ov.reason||'':'')}"
+              style="padding:3px 6px;width:130px">
+            <button class="btn sm gb" onclick="setOverride('${s.id}')">保存改档</button>
+          </div></div>`;
+      }).join(''):`<div class="empty" style="padding:20px">这一档没有供应商</div>`}
+      </div></div>`;
+  }).join('')}`;
+}
+function setOverride(sid){
+  const d=DM(curDemand),s=SM(sid);
+  const g=$('ov_'+sid).value,r=$('ovr_'+sid).value.trim();
+  const auto=judge(d,s).grade;
+  if(g===auto){delete overrides[d.id+'_'+sid];setFlash('b','已恢复为系统判定「'+auto+'」。');}
+  else{overrides[d.id+'_'+sid]={grade:g,reason:r};
+    setFlash('o','<b>'+esc(s.name)+'</b> 手动改为「'+g+'」'+(r?'，原因：'+esc(r):'（未填原因）')
+      +'。<br>提示：改档原因积累到一定数量后，就该回头修判定规则，而不是一直手动改。');}
+  go('match');
+}
+
+/* ======================= P5 询价比价 ======================= */
+/* 构件逐项比价：行=构件，列=各家单价 */
+function itemCompare(d,list){
+  const items=(d&&d.items)?d.items:[];
+  if(!items.length||!list.length)return '';
+  const col=i=>list.map(function(q){
+    const x=(q.items||[]).filter(function(y){return y.i===i;})[0];
+    return x?x.price:null;
+  });
+  let best=0;
+  const body=items.map(function(it,i){
+    const ps=col(i);
+    const ok=ps.filter(function(p){return p!=null&&Number(p)>0;});
+    const mn=ok.length?Math.min.apply(null,ok):null;
+    const mx=ok.length?Math.max.apply(null,ok):null;
+    if(mn!=null)best+=mn*(Number(it.qty)||0);
+    return `<tr><td class="ct mut">${i+1}</td>
+      <td><div class="b">${esc(it.name)}</div><div class="sp2">${esc(it.spec)}</div></td>
+      <td class="ct">${esc(it.qty)} <span class="sp2">${esc(it.unit)}</span></td>
+      ${ps.map(function(p){
+        let c='',t;
+        if(p==null){c='na';t='未报';}
+        else if(Number(p)===0){c='high';t='0';}
+        else{t=fmt(Number(p));
+          if(ok.length>1&&Number(p)===mn)c='low';
+          else if(ok.length>1&&Number(p)===mx)c='high';}
+        return '<td class="num '+c+'">'+t+'</td>';}).join('')}
+      <td class="num">${mn==null?'—':fmt(mn)}</td></tr>`;
+  }).join('');
+  const holes=list.filter(function(q){return missingItems(q)>0;});
+  const minBase=Math.min.apply(null,list.map(function(q){return quoteBase(q);}));
+  return `<div class="card"><div class="card-h"><h3>构件逐项比价</h3>
+    <div class="sub">${items.length} 项构件 × ${list.length} 家 · 单价为各家填报的裸单价，口径折算见下方合价表</div>
+    <div class="r"><span class="sm mut"><span style="color:var(--ok);font-weight:700">绿</span>=行内最低 ·
+      <span style="color:var(--er)">红</span>=行内最高或未含</span></div></div>
+  <table class="itab"><thead><tr><th class="ct" style="width:24px">序</th><th>构件 / 规格</th>
+    <th class="ct" style="width:58px">数量</th>
+    ${list.map(function(q){return '<th class="num">'+esc(q.company)+'</th>';}).join('')}
+    <th class="num" style="width:76px">行内最低</th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td colspan="3" style="text-align:right">构件合价（元）</td>
+      ${list.map(function(q){return '<td class="num">'+fmt(Math.round(quoteBase(q)))+'</td>';}).join('')}
+      <td class="num mut">—</td></tr></tfoot></table>
+    <div class="card-b" style="border-top:1px solid var(--bd2)">
+      ${holes.length?`<div class="alert r" style="margin-bottom:9px"><i>!</i><div>
+        <b>有报价存在未含项，合价不能直接横比：</b>
+        ${holes.map(function(q){
+          const nm=(q.items||[]).filter(function(x){return x.price==null||Number(x.price)===0;})
+            .map(function(x){return (d.items[x.i]||{}).name;}).filter(Boolean).join('、');
+          return esc(q.company)+'（'+esc(nm)+'）';}).join('；')}。
+        这些构件的钱不在合价里 —— 先补回再比，否则是拿对方的漏项当便宜。</div></div>`:''}
+      <div class="alert b" style="margin-bottom:0"><i>!</i><div>
+        每项都取最低价的理论合价 <b>${fmt(Math.round(best))}</b> 元（${wan(best)} 万），
+        对比最低整单合价 <b>${fmt(Math.round(minBase))}</b> 元，
+        ${best<minBase?'低 '+fmt(Math.round(minBase-best))+' 元':'高 '+fmt(Math.round(best-minBase))+' 元'}。
+        仅供参照：拆给多家做，接口配合与联调风险要自己背。</div></div>
+    </div></div>`;
+}
+function rQuote(){
+  const d=DM(curDemand);
+  if(!d)return '<div class="empty">请先选择需求</div>';
+  const pend=pendingOf(d.id);
+  const list=confirmedOf(d.id).map(q=>Object.assign({},q,{landed:landed(q)}))
+    .sort((a,b)=>a.landed-b.landed);
+  const min=list.length?list[0].landed:0;
+  const disp=list.length>1?(list[list.length-1].landed/min).toFixed(2):'—';
+  return flashHtml()+`
+  <div class="card"><div class="card-h"><h3>比价需求</h3><div class="sub">${d.id} · ${esc(d.title)}</div>
+    <div class="r"><select onchange="curDemand=this.value;go('quote')" style="width:auto;padding:5px 9px">
+      ${DEMANDS.map(x=>`<option value="${x.id}" ${x.id===d.id?'selected':''}>${x.id} ${esc(x.title).slice(0,16)}</option>`).join('')}
+    </select></div></div></div>
+  ${pend.length?`<div class="card"><div class="card-h"><h3>待核实报价</h3>
+    <div class="sub">陌生厂提交，确认身份后才进比价表</div></div>
+    <table><thead><tr><th>公司</th><th>联系人</th><th class="rd">报价</th><th class="rd">到手总价</th>
+      <th class="rd">交期</th><th>提交时间</th><th class="rd" style="width:150px">操作</th></tr></thead>
+    <tbody>${pend.map(q=>`<tr>
+      <td class="b">${esc(q.company)}<div class="sm mut">不在供应商档案中</div></td>
+      <td class="sm">${esc(q.contact)}<div class="mut">${esc(q.phone)}</div></td>
+      <td class="rd num">${fmt(Math.round(quoteBase(q)))}</td>
+      <td class="rd num b">${fmt(Math.round(landed(q)))}</td>
+      <td class="rd num">${q.leadDays} 天</td>
+      <td class="sm">${esc(q.at)}</td>
+      <td class="rd"><div class="flex" style="gap:5px;justify-content:flex-end">
+        <button class="btn sm ok" onclick="confirmQ('${q.id}')">确认入表</button>
+        <button class="btn sm dan" onclick="dropQ('${q.id}')">忽略</button></div></td></tr>`).join('')}
+    </tbody></table></div>`:''}
+  ${itemCompare(d,list)}
+  <div class="card"><div class="card-h"><h3>到手总价排序</h3>
+    <div class="sub">${list.length} 份已确认报价 · 统一折算为「含税 / 运到厂 / 含安装 / 含设计 / 含试机」同一口径</div>
+    <div class="r"><span class="sm mut">最高最低差 ${disp} 倍</span></div></div>
+  ${list.length?`
+  <table><thead><tr><th style="width:40px" class="ct">序</th><th>供应商</th>
+    <th class="rd">报价总价</th><th class="rd">到手总价</th><th>折算过程</th>
+    <th class="ct">含税</th><th class="ct">运费</th><th class="ct">安装</th><th class="ct">设计</th><th class="ct">试机</th>
+    <th class="rd">交期</th><th class="ct">质保</th><th>偏离说明</th></tr></thead>
+  <tbody>${list.map((q,i)=>`<tr>
+    <td class="ct"><b>${i+1}</b></td>
+    <td><div class="b">${esc(q.company)}${libByName(q.company)
+        ?`<span class="tag ${LIB_STAG[libByName(q.company).status]}" style="margin-left:5px">库 · ${libByName(q.company).status}</span>`
+        :'<span class="tag gr" style="margin-left:5px">未入库</span>'}</div><div class="sm mut">${esc(q.contact)} · 有效期 ${q.validDays} 天
+      ${missingItems(q)?' · <span style="color:var(--er)">'+missingItems(q)+' 项未含</span>':''}</div></td>
+    <td class="rd num">${fmt(Math.round(quoteBase(q)))}</td>
+    <td class="rd num b" style="color:${i===0?'var(--ok)':'inherit'};font-size:14px">${fmt(Math.round(q.landed))}
+      <div class="sm mut">${wan(q.landed)} 万</div></td>
+    <td class="sm mut" style="max-width:190px">${landedExplain(q)}</td>
+    <td class="ct">${q.taxIncluded?'<span class="tag g">含</span>':'<span class="tag o">否</span>'}</td>
+    <td class="ct">${q.freightIncluded?'<span class="tag g">含</span>':'<span class="tag o">否</span>'}</td>
+    <td class="ct">${q.installIncluded?'<span class="tag g">含</span>':'<span class="tag o">否</span>'}</td>
+    <td class="ct">${q.designIncluded?'<span class="tag g">含</span>':'<span class="tag o">否</span>'}</td>
+    <td class="ct">${q.trialIncluded?'<span class="tag g">含</span>':'<span class="tag o">否</span>'}</td>
+    <td class="rd num">${q.leadDays} 天</td>
+    <td class="ct num">${q.warranty} 月</td>
+    <td class="sm" style="max-width:180px;color:${/无|无偏离/.test(q.deviation)?'var(--mut)':'var(--er)'}">${esc(q.deviation)}</td>
+  </tr>`).join('')}</tbody></table>
+  <div class="card-b" style="border-top:1px solid var(--bd2)">
+    <div class="alert o" style="margin-bottom:10px"><i>!</i><div>
+      <b>系统不打分、不推荐中标。</b>到手总价最低的是 <b>${esc(list[0].company)}</b>，
+      但请注意偏离说明一栏 —— 那一行最容易藏坑（如上海迈新把检测项从 6 项减到 4 项）。
+      口径已对齐，判断交给你做。</div></div>
+    <div class="flex"><button class="btn pri" onclick="award('${list[0].id}')">定标给 ${esc(list[0].company)}</button>
+      <span class="sm mut">定标后需求状态 → 已定标</span></div>
+  </div>`:'<div class="empty"><div class="ic">¥</div>还没有已确认的报价。<br>去「询价单」页把二维码转发给候选厂。</div>'}
+  </div>`;
+}
+function libByName(name){
+  const s=SUPPLIERS.filter(x=>x.name===name)[0];
+  return s?libOf(s.id):null;
+}
+function confirmQ(id){const q=QUOTES.find(x=>x.id===id);if(!q)return;
+  q.status='已确认';
+  const s=SUPPLIERS.filter(x=>x.name===q.company)[0];
+  if(!s)setFlash('g','<b>'+esc(q.company)+'</b> 已确认，进入比价表。<br>这家还不在供应商档案里 —— 建议到 P6 补一份档案，再把它收进供应商库，别让联系方式丢在聊天记录里。');
+  else setFlash('g','<b>'+esc(q.company)+'</b> 已确认，进入比价表。');
+  go('quote');}
+function dropQ(id){const q=QUOTES.find(x=>x.id===id);if(!q)return;
+  QUOTES.splice(QUOTES.indexOf(q),1);setFlash('b','已忽略该报价。');go('quote');}
+function award(id){
+  const q=QUOTES.find(x=>x.id===id);if(!q)return;
+  const d=DM(q.did);if(d){d.status='已定标';d.closed=true;}
+  /* 定标 → 供应商库里标记为「已合作」，这是一次合作闭环的落点 */
+  const e=libByName(q.company);
+  let extra='';
+  if(e){e.status='已合作';e.touchAt=TODAY;
+    if(!e.notes)e.notes=[];
+    e.notes.push({at:TODAY,txt:'中标并定标 '+d.id+'，到手总价 '+fmt(Math.round(landed(q)))+' 元'});
+    extra='<br>已在供应商库标记「已合作」。';}
+  else extra='<br>这家不在供应商库里 —— 建议到 P6 补档案后收进库中，下次直接复用。';
+  setFlash('g','<b>已定标给 '+esc(q.company)+'</b>，到手总价 '+fmt(Math.round(landed(q)))+' 元。需求 '+d.id+' 状态 → 已定标。'+extra);
+  go('quote');
+}
+
+/* ======================= P6 供应商档案 ======================= */
+function rSupplier(){
+  return flashHtml()+`
+  <div class="card"><div class="card-h"><h3>供应商档案</h3>
+    <div class="sub">${SUPPLIERS.length} 家 · 目标：录一家 3 分钟内完成</div>
+    <div class="r"><button class="btn pri sm" onclick="openSup(null)">+ 新增</button></div></div>
+  <table><thead><tr><th style="width:150px">公司</th><th style="width:92px">地区</th><th style="width:130px">联系人</th>
+    <th style="width:150px">最大尺寸</th><th class="ct" style="width:74px">精度</th><th class="ct" style="width:66px">节拍</th>
+    <th style="width:130px">价格量级</th><th style="width:120px">接单门槛</th>
+    <th style="width:110px">资质</th><th class="rd" style="width:120px">操作</th></tr></thead>
+  <tbody>${SUPPLIERS.map(s=>{const le=libOf(s.id);return `<tr>
+    <td><div class="b">${esc(s.name)}${le?`<span class="tag ${LIB_STAG[le.status]}" style="margin-left:5px">库 · ${le.status}</span>`:''}</div>
+      <div class="sm mut">${s.cases.length} 条案例${s.acc==null?' · <span style="color:var(--wn)">精度待补</span>':''}</div></td>
+    <td class="sm">${esc(s.city)}</td>
+    <td class="sm">${esc(s.contact)}<div class="mut">${esc(s.phone)}</div></td>
+    <td class="sm mono">${esc(s.maxSize)}</td>
+    <td class="ct sm num">${s.acc==null?'<span class="tag gr">待补</span>':'±'+s.acc}</td>
+    <td class="ct sm num">${s.cycle?s.cycle+' s':'-'}</td>
+    <td class="sm">${s.priceMin}-${s.priceMax} 万<div class="mut">${s.unit}</div></td>
+    <td class="sm">${s.sample?'<span class="tag g">接打样</span>':'<span class="tag r">不接</span>'}
+      <div class="mut">最小 ${s.minAmount} 万 / MOQ ${s.moq}</div></td>
+    <td>${s.certs.length?s.certs.map(c=>'<span class="tag gr">'+c+'</span>').join(' '):'<span class="mut sm">无</span>'}</td>
+    <td class="rd"><div class="flex" style="gap:5px;justify-content:flex-end">
+      <button class="btn sm" onclick="showSup('${s.id}')">详情</button>
+      <button class="btn sm" onclick="openSup('${s.id}')">编辑</button>
+      ${le?`<button class="btn sm gb" onclick="showLib('${s.id}')">库 · ${le.status}</button>`
+         :`<button class="btn sm gb" onclick="libAdd('${s.id}','${curDemand}')">收入库</button>`}</div></td></tr>`;}).join('')}
+  </tbody></table></div>`;
+}
+/* ======================= P7 供应商库 ======================= */
+let libF={kw:'',status:'',did:'',sort:'touch'};
+function libSetF(k,v){libF[k]=v;go('lib');}
+function libResetF(){libF={kw:'',status:'',did:'',sort:'touch'};go('lib');}
+function libList(){
+  LIB.forEach(libSyncStatus);
+  let a=LIB.filter(e=>SM(e.sid));
+  const kw=libF.kw.trim();
+  if(kw)a=a.filter(e=>{const s=SM(e.sid);
+    return s.name.indexOf(kw)>=0||s.city.indexOf(kw)>=0||String(s.contact).indexOf(kw)>=0
+      ||(e.tags||[]).join('、').indexOf(kw)>=0;});
+  if(libF.status)a=a.filter(e=>e.status===libF.status);
+  else a=a.filter(e=>e.status!=='已淘汰');           /* 默认隐藏已淘汰 */
+  if(libF.did)a=a.filter(e=>(e.froms||[]).some(f=>f.did===libF.did));
+  if(libF.sort==='price')
+    a=a.slice().sort((x,y)=>(libBest(x)==null?1e15:libBest(x))-(libBest(y)==null?1e15:libBest(y)));
+  else a=a.slice().sort((x,y)=>String(y.touchAt||'').localeCompare(String(x.touchAt||'')));
+  return a;
+}
+function rLib(){
+  const all=LIB.filter(e=>SM(e.sid));
+  const live=all.filter(e=>e.status!=='已淘汰');
+  const list=libList();
+  const nStatus=st=>live.filter(e=>e.status===st).length;
+  return flashHtml()+`
+  <div class="stat-row">
+    <div class="stat"><div class="l">库内供应商</div><div class="v">${live.length}<small>家</small></div>
+      <div class="d">档案总数 ${SUPPLIERS.length} 家 · 已淘汰 ${all.length-live.length}</div></div>
+    <div class="stat"><div class="l">入库来源</div>
+      <div class="v">${live.filter(e=>libGrade(e)==='推荐').length}<small>推荐</small></div>
+      <div class="d">可联系 ${live.filter(e=>libGrade(e)==='可联系').length} 家 · 只有这两档会入库</div></div>
+    <div class="stat"><div class="l">已联系及以上</div>
+      <div class="v">${live.filter(e=>e.status!=='待联系').length}<small>家</small></div>
+      <div class="d">待联系 ${nStatus('待联系')} · 已联系 ${nStatus('已联系')}</div></div>
+    <div class="stat"><div class="l">产出</div>
+      <div class="v">${live.filter(e=>libBest(e)!=null).length}<small>家已报价</small></div>
+      <div class="d">已合作 ${nStatus('已合作')} 家</div></div>
+  </div>
+  <div class="alert b"><i>!</i><div>
+    <b>供应商库 = 被筛过一轮的资源池。</b>
+    每次打开某个需求的「智能匹配」，判定为<b>推荐</b>和<b>可联系</b>的厂家会自动入库；
+    <b>不符</b>（能力边界不够）和<b>待确认</b>（档案没填全）不入库。
+    同一家被多个需求筛中时只占一条记录，来源需求会累加 —— 库只增不丢。</div></div>
+  <div class="card"><div class="card-h"><h3>供应商库</h3>
+    <div class="sub">${list.length} 家（共 ${live.length} 家）</div>
+    <div class="r"><button class="btn sm" onclick="libExport()">导出 CSV</button></div></div>
+  <div class="card-b">
+    <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <input id="f_kw" value="${esc(libF.kw)}" placeholder="搜公司 / 地区 / 联系人 / 标签"
+        style="width:230px" onchange="libSetF('kw',this.value)">
+      <select id="f_st" style="width:auto;padding:6px 9px" onchange="libSetF('status',this.value)">
+        <option value="">全部状态（隐藏已淘汰）</option>
+        ${LIB_STATUS.map(o=>`<option ${o===libF.status?'selected':''}>${o}</option>`).join('')}
+      </select>
+      <select id="f_did" style="width:auto;padding:6px 9px" onchange="libSetF('did',this.value)">
+        <option value="">全部来源需求</option>
+        ${DEMANDS.map(o=>`<option value="${o.id}" ${o.id===libF.did?'selected':''}>${o.id} ${esc(o.title).slice(0,14)}</option>`).join('')}
+      </select>
+      <select id="f_sort" style="width:auto;padding:6px 9px" onchange="libSetF('sort',this.value)">
+        <option value="touch" ${libF.sort==='touch'?'selected':''}>按最近接触</option>
+        <option value="price" ${libF.sort==='price'?'selected':''}>按最低到手价</option>
+      </select>
+      <button class="btn sm gb" onclick="libResetF()">重置</button>
+    </div>
+    ${list.length?`<table><thead><tr>
+      <th style="width:170px">公司</th><th style="width:96px">入库档位</th><th style="width:150px">来源需求</th>
+      <th style="width:112px">库内状态</th><th style="width:112px">报价 / 到手低价</th>
+      <th style="width:96px">最近接触</th><th class="rd" style="width:150px">操作</th></tr></thead>
+    <tbody>${list.map(e=>{
+      const s=SM(e.sid),best=libBest(e),n=libQuotes(e).length;
+      return `<tr${e.status==='已淘汰'?' style="opacity:.55"':''}>
+        <td><div class="b">${esc(s.name)}</div>
+          <div class="sm mut">${esc(s.city)} · ${esc(s.contact)} ${esc(s.phone)}</div>
+          ${(e.tags||[]).length?`<div>${e.tags.map(t=>'<span class="tag gr">'+esc(t)+'</span>').join(' ')}</div>`:''}</td>
+        <td><span class="tag ${libGrade(e)==='推荐'?'g':'b'}">${libGrade(e)}</span>
+          <div class="sm mut">${(e.froms||[]).length} 次入库</div></td>
+        <td class="sm">${(e.froms||[]).map(f=>`<div><a style="color:var(--pri);cursor:pointer"
+            onclick="curDemand='${f.did}';go('match')">${f.did}</a> · ${f.grade}</div>`).join('')||'—'}</td>
+        <td><select style="padding:3px 6px;width:auto;font-size:12px"
+            onchange="libSetStatus('${e.sid}',this.value)">
+            ${LIB_STATUS.map(o=>`<option ${o===e.status?'selected':''}>${o}</option>`).join('')}
+          </select></td>
+        <td class="sm">${n?`<b>${n}</b> 份<div class="mut">最低 ${fmt(best)} 元</div>`
+            :'<span class="mut">暂无报价</span>'}</td>
+        <td class="sm">${e.touchAt||'<span class="mut">—</span>'}</td>
+        <td class="rd"><div class="flex" style="gap:5px;justify-content:flex-end">
+          <button class="btn sm" onclick="showLib('${e.sid}')">详情</button>
+          ${e.status==='已淘汰'
+            ?`<button class="btn sm gb" onclick="libRestore('${e.sid}')">恢复</button>`
+            :`<button class="btn sm dan" onclick="libExclude('${e.sid}')">淘汰</button>`}
+        </div></td></tr>`;}).join('')}
+    </tbody></table>`
+    :`<div class="empty"><div class="ic">◈</div>还没有厂家入库。<br>去「智能匹配」跑一次需求，推荐和可联系的厂家会自动进库。</div>`}
+    <div class="alert o" style="margin:12px 0 0"><i>!</i><div>
+      库里是<b>筛过一轮的候选</b>，不是全部档案；想看全部 8 家去 <a style="color:var(--pri);cursor:pointer" onclick="go('supplier')">供应商档案 P6</a>。
+      陌生厂（扫通用码自己报名的）提交报价后先进「待核实」，研发确认身份才会入此表。</div></div>
+  </div></div>`;
+}
+function showLib(sid){
+  const e=libOf(sid),s=SM(sid);
+  if(!e||!s)return;
+  const qs=libQuotes(e);
+  $('dwT').textContent=s.name+' · 供应商库';
+  $('dwB').innerHTML=`
+    <div class="flex" style="gap:7px;align-items:center;margin-bottom:11px;flex-wrap:wrap">
+      <span class="tag ${libGrade(e)==='推荐'?'g':'b'}">入库档位 ${libGrade(e)}</span>
+      <span class="tag ${LIB_STAG[e.status]}">状态 ${e.status}</span>
+      <span class="sm mut">负责人 ${esc(e.owner||'—')} · 最近接触 ${e.touchAt||'未记录'}</span>
+    </div>
+    <div class="grid g2 mb">
+      <div class="psec"><h5>基本信息</h5>
+        <div class="kv"><span class="k">地区</span><span class="v">${esc(s.city)}</span></div>
+        <div class="kv"><span class="k">联系人</span><span class="v">${esc(s.contact)} ${esc(s.phone)}</span></div>
+        <div class="kv"><span class="k">价格量级</span><span class="v">${s.priceMin}-${s.priceMax} 万 / ${s.unit}</span></div>
+        <div class="kv"><span class="k">接单门槛</span><span class="v">${s.sample?'<span class="tag g">接打样</span>':'<span class="tag r">不接</span>'} · 最小 ${s.minAmount} 万 · MOQ ${s.moq}</span></div>
+      </div>
+      <div class="psec"><h5>能力边界（决定会不会入库）</h5>
+        <div class="kv"><span class="k">最大尺寸</span><span class="v mono">${esc(s.maxSize)}</span></div>
+        <div class="kv"><span class="k">典型精度</span><span class="v">${s.acc==null?'<span class="tag gr">未填</span>':'±'+s.acc+' mm'}</span></div>
+        <div class="kv"><span class="k">可达节拍</span><span class="v">${s.cycle?s.cycle+' s/件':'未填'}</span></div>
+        <div class="kv"><span class="k">档案备注</span><span class="v">${esc(s.note||'—')}</span></div>
+      </div>
+    </div>
+    <div class="psec mb"><h5>入库轨迹<span class="mut" style="font-weight:400">（哪些需求把它筛进来的）</span></h5>
+      ${(e.froms||[]).length?(e.froms||[]).map(f=>{const d=DM(f.did);
+        return `<div class="kv"><span class="k">${f.at}</span><span class="v">
+          <a style="color:var(--pri);cursor:pointer" onclick="curDemand='${f.did}';closeDw();go('match')">${f.did}</a>
+          ${d?' '+esc(d.title):''} → <b>${f.grade}</b></span></div>`;}).join('')
+        :'<div class="sm mut">暂无记录</div>'}
+    </div>
+    <div class="psec mb"><h5>报价历史<span class="mut" style="font-weight:400">（只统计已确认的报价）</span></h5>
+      ${qs.length?`<table class="itab"><thead><tr><th>需求</th><th class="num">构件合价</th>
+          <th class="num">到手总价</th><th class="ct">日期</th></tr></thead><tbody>
+        ${qs.map(q=>`<tr><td><a style="color:var(--pri);cursor:pointer"
+            onclick="curDemand='${q.did}';closeDw();go('quote')">${q.did}</a></td>
+          <td class="num">${fmt(Math.round(quoteBase(q)))}</td>
+          <td class="num b">${fmt(Math.round(landed(q)))}</td><td class="ct sm">${esc(q.at)}</td></tr>`).join('')}
+        </tbody></table>`:'<div class="sm mut">还没有已确认的报价 —— 转发询价码催一催</div>'}
+    </div>
+    <div class="psec"><h5>跟进记录</h5>
+      ${(e.notes||[]).length?(e.notes||[]).map(n=>`<div class="kv">
+          <span class="k">${esc(n.at)}</span><span class="v">${esc(n.txt)}</span></div>`).join('')
+        :'<div class="sm mut">暂无跟进记录</div>'}
+      <div class="flex" style="gap:7px;margin-top:9px">
+        <input id="lib_note" placeholder="记一笔：电话沟通了什么、卡在哪里" style="flex:1">
+        <button class="btn pri sm" onclick="var t=document.getElementById('lib_note').value;libNote('${sid}',t);showLib('${sid}')">保存</button>
+      </div>
+    </div>
+    <div class="flex" style="gap:7px;margin-top:12px;flex-wrap:wrap">
+      ${LIB_STATUS.filter(x=>x!==e.status).map(x=>`<button class="btn sm"
+        onclick="libSetStatus('${sid}','${x}');showLib('${sid}')">改为${x}</button>`).join('')}
+      <button class="btn sm gb" onclick="showSup('${sid}')">看完整档案</button>
+      <button class="btn sm" onclick="closeDw()">关闭</button>
+    </div>`;
+  $('mask').classList.add('on');$('dw').classList.add('on');
+}
+
+function showSup(id){
+  const s=SM(id);if(!s)return;
+  $('dwT').textContent=s.name;
+  $('dwB').innerHTML=`
+    <div class="grid g2 mb">
+      <div class="psec"><h5>基本信息</h5>
+        <div class="kv"><span class="k">地区</span><span class="v">${esc(s.city)}</span></div>
+        <div class="kv"><span class="k">联系人</span><span class="v">${esc(s.contact)} ${esc(s.phone)}</span></div>
+        <div class="kv"><span class="k">价格量级</span><span class="v">${s.priceMin}-${s.priceMax} 万 / ${s.unit}</span></div>
+      </div>
+      <div class="psec"><h5>能力边界（判定 R1）</h5>
+        <div class="kv"><span class="k">最大尺寸</span><span class="v mono">${esc(s.maxSize)}</span></div>
+        <div class="kv"><span class="k">典型精度</span><span class="v">${s.acc==null?'<span class="tag gr">未填 · 待补录</span>':'±'+s.acc+' mm'}</span></div>
+        <div class="kv"><span class="k">可达节拍</span><span class="v">${s.cycle?s.cycle+' s/件':'未填'}</span></div>
+      </div>
+    </div>
+    <div class="psec mb"><h5>接单门槛（判定 R2）</h5>
+      <div class="kv"><span class="k">研发打样</span><span class="v">${s.sample?'<span class="tag g">接</span>':'<span class="tag r">不接</span>'}</span></div>
+      <div class="kv"><span class="k">最小金额</span><span class="v">${s.minAmount} 万</span></div>
+      <div class="kv"><span class="k">MOQ</span><span class="v">${s.moq}</span></div>
+      <div class="kv"><span class="k">典型交期</span><span class="v">${s.leadDays==null?'未填（判为未知）':s.leadDays+' 天'}</span></div>
+    </div>
+    <div class="psec mb"><h5>资质（判定 R3）</h5>
+      <div class="kv"><span class="k">已具备</span><span class="v">${s.certs.length?s.certs.map(c=>'<span class="tag g">'+CERT_LABEL[c]+'</span>').join(' '):'无'}</span></div>
+    </div>
+    <div class="psec mb"><h5>做过什么<span class="mut" style="font-weight:400">（只展示，不参与判定）</span></h5>
+      ${s.cases.length?s.cases.map(c=>'<div class="kv"><span class="k">·</span><span class="v">'+esc(c)+'</span></div>').join('')
+        :'<div class="sm mut">暂无记录</div>'}
+    </div>
+    <div class="psec"><h5>评价备注</h5><div class="sm">${esc(s.note||'—')}</div></div>`;
+  $('mask').classList.add('on');$('dw').classList.add('on');
+}
+function openSup(id){
+  const s=id?SM(id):null;
+  const v=(k,dv)=>s?(s[k]==null?'':s[k]):(dv==null?'':dv);
+  $('dwT').textContent=s?'编辑 · '+s.name:'新增供应商';
+  $('dwB').innerHTML=`
+    <div class="alert b"><i>!</i><div>必填 8 项：公司名称、地区、联系人+电话、最大加工尺寸、典型精度、
+      可达节拍、价格量级、接单门槛。其余选填 —— <b>选填留空不会报错，只会让判定落「可联系」或「待确认」。</b></div></div>
+    <div class="grid g2">
+      <div class="fg"><label>公司名称<span class="req">*</span></label><input data-s="name" value="${esc(v('name'))}"></div>
+      <div class="fg"><label>地区 / 城市<span class="req">*</span></label><input data-s="city" value="${esc(v('city'))}" placeholder="江苏 苏州"></div>
+      <div class="fg"><label>联系人<span class="req">*</span></label><input data-s="contact" value="${esc(v('contact'))}" placeholder="王经理"></div>
+      <div class="fg"><label>电话<span class="req">*</span></label><input data-s="phone" value="${esc(v('phone'))}" placeholder="138-0000-0000"></div>
+      <div class="fg"><label>最大加工尺寸<span class="req">*</span></label>
+        <input data-s="maxSize" value="${esc(v('maxSize'))}" placeholder="6000×3000×2500"><div class="hint">判定 R1</div></div>
+      <div class="fg"><label>典型精度 mm<span class="req">*</span></label>
+        <input data-s="acc" type="number" step="0.001" value="${esc(v('acc'))}" placeholder="0.02"><div class="hint">判定 R1，留空 → 待确认</div></div>
+      <div class="fg"><label>可达节拍 s/件<span class="req">*</span></label>
+        <input data-s="cycle" type="number" step="0.1" value="${esc(v('cycle'))}" placeholder="2"><div class="hint">不做节拍类填 0</div></div>
+      <div class="fg"><label>价格量级（万元）<span class="req">*</span></label>
+        <div class="flex" style="gap:6px"><input data-s="priceMin" type="number" step="0.01" value="${esc(v('priceMin'))}" placeholder="30">
+        <span class="mut">-</span><input data-s="priceMax" type="number" step="0.01" value="${esc(v('priceMax'))}" placeholder="200"></div>
+        <div class="hint">判定 R4 · 拿不到就填「上次合作的大致金额」</div></div>
+      <div class="fg"><label>单位</label><select data-s="unit">
+        ${['整机','单件','套'].map(o=>`<option ${o===(s?s.unit:'整机')?'selected':''}>${o}</option>`).join('')}</select></div>
+      <div class="fg"><label>最小项目金额（万元）<span class="req">*</span></label>
+        <input data-s="minAmount" type="number" step="0.1" value="${esc(v('minAmount'))}" placeholder="20"></div>
+      <div class="fg"><label>MOQ<span class="req">*</span></label>
+        <input data-s="moq" type="number" value="${esc(v('moq'))}" placeholder="1"></div>
+      <div class="fg"><label>是否接研发打样<span class="req">*</span></label>
+        <select data-s="sample"><option value="1" ${!s||s.sample?'selected':''}>接</option>
+        <option value="0" ${s&&!s.sample?'selected':''}>不接</option></select></div>
+      <div class="fg"><label>典型交期（天）<span class="op">选填</span></label>
+        <input data-s="leadDays" type="number" value="${esc(v('leadDays'))}" placeholder="120"><div class="hint">不填则 R2 判未知</div></div>
+    </div>
+    <div class="fg"><label>资质<span class="op">选填</span></label>
+      <div class="chk">${CERT_KEYS.map(c=>`<label class="${s&&s.certs.indexOf(c)>=0?'on':''}"><input type="checkbox" data-sc="${c}"
+        ${s&&s.certs.indexOf(c)>=0?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${CERT_LABEL[c]}</label>`).join('')}</div></div>
+    <div class="fg"><label>做过什么<span class="op">选填 · 3 条以内，只展示不判定</span></label>
+      <textarea data-s="cases" placeholder="一行一条">${esc(s?(s.cases||[]).join('\n'):'')}</textarea></div>
+    <div class="fg"><label>评价备注<span class="op">选填</span></label>
+      <textarea data-s="note" style="min-height:52px">${esc(v('note'))}</textarea></div>
+    <div class="flex"><button class="btn pri" onclick="saveSup('${id||''}')">保存</button>
+      <button class="btn" onclick="closeDw()">取消</button></div>`;
+  $('mask').classList.add('on');$('dw').classList.add('on');
+}
+function saveSup(id){
+  const g=k=>{const el=document.querySelector('[data-s="'+k+'"]');return el?el.value.trim():'';};
+  const miss=[];
+  ['name','city','contact','phone','maxSize','acc','cycle','priceMin','priceMax','minAmount','moq'].forEach(k=>{
+    if(!g(k))miss.push(k);});
+  if(miss.length){
+    const LBL={name:'公司名称',city:'地区',contact:'联系人',phone:'电话',maxSize:'最大加工尺寸',
+      acc:'典型精度',cycle:'可达节拍',priceMin:'价格量级下限',priceMax:'价格量级上限',
+      minAmount:'最小项目金额',moq:'MOQ'};
+    $('dwB').insertAdjacentHTML('afterbegin',
+      '<div class="alert r"><i>!</i><div><b>必填项缺失：</b>'+miss.map(k=>LBL[k]).join('、')+'</div></div>');
+    return;
+  }
+  const s=id?SM(id):{id:'S'+String(SUPPLIERS.length+1).padStart(3,'0'),cases:[],certs:[]};
+  Object.assign(s,{
+    name:g('name'),city:g('city'),contact:g('contact'),phone:g('phone'),
+    maxSize:g('maxSize'),acc:num(g('acc')),cycle:num(g('cycle'))||0,
+    priceMin:num(g('priceMin')),priceMax:num(g('priceMax')),unit:g('unit')||'整机',
+    minAmount:num(g('minAmount'))||0,moq:num(g('moq'))||1,sample:g('sample')==='1',
+    leadDays:num(g('leadDays')),certs:CERT_KEYS.filter(c=>{const e=document.querySelector('[data-sc="'+c+'"]');return e&&e.checked;}),
+    cases:g('cases').split('\n').map(x=>x.trim()).filter(Boolean).slice(0,3),note:g('note')
+  });
+  if(!id)SUPPLIERS.push(s);
+  closeDw();setFlash('g','<b>'+esc(s.name)+'</b> 已保存。');go('supplier');
+}
+function closeDw(){$('mask').classList.remove('on');$('dw').classList.remove('on');}
+
+/* ======================= S1 扫码报价页（手机 H5） ======================= */
+/* 扫码打不开需求时的兜底页：不再只说「不存在」，而是给出能自己解决的办法 */
+function scanFailHtml(){
+  const d=urlParams().d;
+  return `
+  <div class="card" style="max-width:560px;margin:0 auto"><div class="card-h"><h3>这份链接没能带出需求内容</h3>
+    <div class="sub">${d?('需求号 '+esc(d)):'链接里没有需求号'}</div></div>
+  <div class="card-b">
+    <div class="alert o"><i>!</i><div><b>不是您操作错了。</b>
+      这个平台目前没有服务器，需求数据存在研发自己电脑上，
+      手机扫码打开的页面里默认没有这条需求，所以取不到内容。</div></div>
+    <h4 style="font-size:13px;margin:12px 0 7px">三种原因，对应三种办法</h4>
+    <div class="psec">
+      <div class="kv"><span class="k">① 链接被截断</span><span class="v">微信转发时长链接可能丢参数。
+        请让研发在询价单页点<b>「复制」</b>重新发一次，不要用截图里的码。</span></div>
+      <div class="kv"><span class="k">② 需求内容太长</span><span class="v">二维码装不下的需求，链接只带需求号。
+        请让研发用询价单页的<b>「导出询价页 HTML」</b>，把导出的页面发给您或部署后重新生成二维码。</span></div>
+      <div class="kv"><span class="k">③ 需求已归档/删除</span><span class="v">请向研发确认是否还在询价期内。</span></div>
+    </div>
+    <div class="sm mut" style="margin-top:10px">研发侧的两步自检：
+      询价单页看二维码下方是否显示「<b>链接自带需求数据</b>」；
+      若显示「内容超长」，就改用导出 HTML 的方式下发。</div>
+    <div class="flex" style="margin-top:12px">
+      <button class="btn" onclick="location.href=location.pathname">返回首页</button></div>
+  </div></div>`;
+}
+function rS1(){
+  const d=DM(s1Demand);
+  if(!d)return scanFailHtml();
+  const closed=(daysLeft(String(d.deadline).slice(0,10))<0)||d.closed;
+  /* 扫码模式（真机/新窗口打开链接）：只留手机页，去掉研发端说明与模拟切换器 */
+  const shell=scanMode?'':`
+  <div class="alert b"><i>!</i><div>
+    <b>S1 是唯一必须部署到公网的页面。</b>下面是手机端真实形态：供应商微信扫码 → 看到文字版需求 → 免注册直接填 → 提交。
+    原型里可切换需求模拟不同二维码。</div></div>
+  <div class="card"><div class="card-h"><h3>模拟扫码</h3><div class="sub">切换需求 = 扫不同的码</div>
+    <div class="r"><select onchange="s1Demand=this.value;go('s1')" style="width:auto;padding:5px 9px">
+      ${DEMANDS.map(x=>`<option value="${x.id}" ${x.id===s1Demand?'selected':''}>${x.id} ${esc(x.title).slice(0,18)}</option>`).join('')}
+    </select></div></div></div>`;
+  return flashHtml()+shell+`
+  <div class="phonew"><div class="phone">
+    <div class="bar"><span style="opacity:.6">‹</span><span class="t">询价单报价</span><span style="opacity:.6">···</span></div>
+    <div class="body">
+      <div style="font-size:14px;font-weight:600;margin-bottom:3px">${esc(d.title)}</div>
+      <div class="sm mut" style="margin-bottom:11px">${d.id} · ${esc(d.place)} · 报价截止 ${esc(d.deadline)}</div>
+      <div class="psec">
+        <h5>需求摘要</h5>
+        <div class="kv"><span class="k">描述</span><span class="v">${esc(d.desc)}</span></div>
+        <div class="kv"><span class="k">关键规格</span><span class="v">尺寸 ${esc(d.size)} mm · 精度 ±${d.acc} mm${d.cycle?' · 节拍 '+d.cycle+' s/件':''}</span></div>
+        <div class="kv"><span class="k">数量</span><span class="v">${d.qty}</span></div>
+        <div class="kv"><span class="k">交期</span><span class="v">${esc(d.delivery)}</span></div>
+        <div class="kv"><span class="k">预算</span><span class="v">${d.budget} 万元</span></div>
+        ${d.acceptance?`<div class="kv"><span class="k">验收</span><span class="v">${esc(d.acceptance)}</span></div>`:''}
+      </div>
+      <div class="alert o" style="margin-bottom:13px;font-size:12px;padding:9px 11px"><i>!</i><div>
+        <b>图纸需签 NDA 后单独提供。</b>如需查看图纸，请联系 ${esc(d.place)}研发部 · 张工 138-0000-0000。</div></div>
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:9px">填写报价信息</div>
+      <div class="prow">
+        <div class="pfg"><label>公司名称<span class="req">*</span></label><input id="q_company" placeholder="必填"></div>
+        <div class="pfg"><label>联系人<span class="req">*</span></label><input id="q_contact" placeholder="必填"></div>
+      </div>
+      <div class="pfg"><label>手机号<span class="req">*</span></label>
+        <input id="q_phone" type="tel" placeholder="用于识别重复提交">
+        <div class="hint" style="font-size:10.5px">同一手机号重复提交将提示已提交并可修改</div></div>
+      <div style="font-size:12.5px;font-weight:600;margin:2px 0 7px">按构件逐项报单价</div>
+      ${(d.items&&d.items.length)?itemTable(d,'fill')
+        :`<div class="pfg"><label>报价总价（元）<span class="req">*</span></label>
+           <input id="q_total" type="number" placeholder="480000"></div>`}
+      <div class="sm mut" style="margin:5px 0 12px;font-size:11px">单价 × 数量 = 小计，合计自动算出；某项不做请填 0，不要留空。</div>
+      <div class="pfg"><label>是否含税<span class="req">*</span></label>
+        <select id="q_tax" onchange="document.getElementById('q_taxrate_w').style.display=this.value==='0'?'':'none'">
+          <option value="1">含税</option><option value="0">不含税</option></select>
+        <div class="pinline" id="q_taxrate_w" style="display:none">税率 <input id="q_taxrate" type="number" value="13"> %</div></div>
+      ${[['freight','运费','q_freightfee'],['install','安装调试','q_installfee'],
+         ['design','设计费','q_designfee'],['trial','带料试机','q_trialfee']].map(function(a){
+        const k=a[0],lb=a[1],fid=a[2];
+        return `<div class="pfg"><label>是否含${lb}<span class="req">*</span></label>
+          <select id="q_${k}" onchange="document.getElementById('${fid}_w').style.display=this.value==='0'?'':'none'">
+            <option value="1">含</option><option value="0">不含</option></select>
+          <div class="pinline" id="${fid}_w" style="display:none">${lb}费用 <input id="${fid}" type="number" value="0"> 元</div></div>`;
+      }).join('')}
+      <div class="prow">
+        <div class="pfg"><label>交货周期（天）<span class="req">*</span></label><input id="q_lead" type="number" placeholder="120"></div>
+        <div class="pfg"><label>质保（月）<span class="req">*</span></label><input id="q_warranty" type="number" value="12"></div>
+      </div>
+      <div class="pfg"><label>报价有效期（天）<span class="req">*</span></label>
+        <input id="q_valid" type="number" value="30"></div>
+      <div class="pfg"><label>偏离说明<span class="req">*</span></label>
+        <textarea id="q_dev" placeholder="与技术要求的任何差异；没有就填「无」"></textarea>
+        <div class="hint" style="font-size:10.5px">这行最容易藏坑，必填</div></div>
+      <div class="pfg"><label>备注<span class="op">选填</span></label><textarea id="q_note" style="min-height:40px"></textarea></div>
+      <div class="pfg"><label>上传报价单 PDF<span class="op">选填</span></label><input type="file" accept=".pdf"></div>
+      <div id="q_msg"></div>
+      ${closed
+        ?`<div class="alert o" style="font-size:12px;margin:6px 0"><i>!</i><div>
+            该询价单已于 ${esc(d.deadline)} 截止，无法再提交。如有疑问请联系研发张工 138-0000-0000。</div></div>`
+        :`<button class="btn pri" style="width:100%;padding:10px;margin-top:4px" onclick="submitQ()">提交报价</button>
+      <div class="sm mut" style="text-align:center;margin-top:9px;line-height:1.6">提交后研发会核实身份<br>平台不会公开您的报价给其他供应商</div>`}
+    </div>
+  </div></div>`;
+}
+function submitQ(){
+  const g=id=>{const el=$(id);return el?el.value.trim():'';};
+  const d=DM(s1Demand);
+  if(!d)return;
+  if((daysLeft(String(d.deadline).slice(0,10))<0)||d.closed){
+    const m=$('q_msg');
+    if(m)m.innerHTML='<div class="alert o" style="font-size:12px;margin:6px 0"><i>!</i><div>该询价单已截止，无法提交。</div></div>';
+    return;
+  }
+  const hasItems=!!(d&&d.items&&d.items.length);
+  const need={q_company:'公司名称',q_contact:'联系人',q_phone:'手机号',
+    q_lead:'交货周期',q_warranty:'质保',q_valid:'报价有效期',q_dev:'偏离说明'};
+  if(!hasItems)need.q_total='报价总价';
+  const miss=[];
+  Object.keys(need).forEach(k=>{if(!g(k))miss.push(need[k]);});
+  /* 逐行单价：不做某项可填 0，但不能留空 —— 留空会让比价出现窟窿 */
+  let items=[],blank=[];
+  if(hasItems){
+    items=(d.items||[]).map(function(it,i){
+      const el=$('qi_'+i),raw=el?String(el.value).trim():'';
+      if(raw==='')blank.push('第 '+(i+1)+' 项「'+it.name+'」');
+      return {i:i,price:raw===''?null:(parseFloat(raw)||0)};
+    });
+  }
+  const msg=$('q_msg');
+  if(miss.length||blank.length){
+    msg.innerHTML='<div class="alert r" style="font-size:12px;margin:6px 0"><i>!</i><div>'
+      +(miss.length?'请填写：'+miss.join('、'):'')
+      +(blank.length?(miss.length?'<br>':'')+'单价未填：'+blank.join('、')+'<br>不做该项请填 0，不要留空。':'')
+      +'</div></div>';
+    return;
+  }
+  const sum=hasItems?items.reduce(function(a,b){return a+((Number(b.price)||0)*itemQty(d,b.i));},0)
+                    :(num(g('q_total'))||0);
+  const phone=g('q_phone'),company=g('q_company');
+  const dup=QUOTES.find(q=>q.did===s1Demand&&q.phone===phone);
+  if(dup){
+    msg.innerHTML='<div class="alert o" style="font-size:12px;margin:6px 0"><i>!</i><div>该手机号已提交过报价（'
+      +esc(dup.company)+' '+fmt(dup.total)+' 元），已为您更新为本次内容。</div></div>';
+    fillQ(dup);return;
+  }
+  const q={id:'Q'+String(QUOTES.length+1).padStart(3,'0'),did:s1Demand,company:company,
+    contact:g('q_contact'),phone:phone,items:items,total:Math.round(sum),
+    taxIncluded:g('q_tax')==='1',taxRate:num(g('q_taxrate'))||13,
+    freightIncluded:g('q_freight')==='1',freight:num(g('q_freightfee'))||0,
+    installIncluded:g('q_install')==='1',installFee:num(g('q_installfee'))||0,
+    designIncluded:g('q_design')==='1',designFee:num(g('q_designfee'))||0,
+    trialIncluded:g('q_trial')==='1',trialFee:num(g('q_trialfee'))||0,
+    leadDays:num(g('q_lead'))||0,warranty:num(g('q_warranty'))||12,validDays:num(g('q_valid'))||30,
+    deviation:g('q_dev'),note:g('q_note'),
+    status:SUPPLIERS.some(s=>s.name===company)?'已确认':'待核实',at:TODAY+' 12:00'};
+  QUOTES.push(q);
+  const code=quoteCode(q);
+  msg.innerHTML='<div class="alert g" style="font-size:12px;margin:6px 0"><i>✓</i><div>提交成功。'
+    +(hasItems?'构件合价 <b>'+fmt(Math.round(sum))+'</b> 元，':'')
+    +'按统一口径折算后<b>到手总价 '+fmt(Math.round(landed(q)))+'</b> 元'
+    +(q.status==='待核实'?'。<br>您不在供应商档案中，研发核实身份后才会进入比价表。':'。')
+    +'</div></div>'
+    /* 原型没有服务器：手机上的提交回不到研发电脑，只能靠这段回传码人工带回去 */
+    +'<div style="border:1px solid var(--bd);border-radius:8px;padding:9px 10px;margin:8px 0;background:#f8fafc">'
+    +'<div style="font-size:11.5px;font-weight:600;margin-bottom:5px">把这段回传码发给研发</div>'
+    +'<div style="font-size:10.5px;color:var(--mut);margin-bottom:6px;line-height:1.5">'
+    +'本页提交的内容不会自动同步到研发电脑（平台未部署服务器）。复制下面的码，微信发给对接的研发工程师，'
+    +'他在「询价比价」粘贴导入即可。</div>'
+    +'<textarea id="qcode" readonly style="min-height:58px;font-family:Consolas,Monaco,monospace;font-size:10.5px">'
+    +esc(code)+'</textarea>'
+    +'<div class="flex" style="gap:7px;margin-top:6px;align-items:center">'
+    +'<button class="btn pri sm" onclick="copyQuoteCode()">复制回传码</button>'
+    +'<span class="sm mut" id="qcodeTip"></span></div></div>';
+  setFlash('g','<b>已收到 '+esc(company)+' 的报价</b>（'+q.status+'），'
+    +(hasItems?'合价 '+fmt(Math.round(sum))+' 元 / ':'')
+    +'到手总价 '+fmt(Math.round(landed(q)))+' 元。去「询价比价」查看逐项对比。');
+  refreshBadges();
+}
+function copyQuoteCode(){
+  const el=$('qcode'),tip=$('qcodeTip');if(!el)return;
+  el.select();el.setSelectionRange(0,el.value.length);
+  let ok=false;
+  try{ok=document.execCommand('copy');}catch(e){}
+  if(!ok&&navigator.clipboard)navigator.clipboard.writeText(el.value).then(function(){},function(){});
+  if(tip)tip.innerHTML='<b style="color:var(--ok)">已复制</b>，粘贴到微信发给研发即可。';
+}
+function fillQ(q){
+  const d=DM(s1Demand);
+  const items=(d&&d.items)?(d.items||[]).map(function(it,i){
+    const el=$('qi_'+i),raw=el?String(el.value).trim():'';
+    return {i:i,price:raw===''?null:(parseFloat(raw)||0)};
+  }):[];
+  const sum=items.length?items.reduce(function(a,b){return a+((Number(b.price)||0)*itemQty(d,b.i));},0)
+                        :(num($('q_total')?$('q_total').value:'')||0);
+  Object.assign(q,{
+    company:$('q_company').value.trim(),contact:$('q_contact').value.trim(),
+    items:items.length?items:q.items,total:Math.round(sum),
+    taxIncluded:$('q_tax').value==='1',taxRate:num($('q_taxrate').value)||13,
+    freightIncluded:$('q_freight').value==='1',freight:num($('q_freightfee').value)||0,
+    installIncluded:$('q_install').value==='1',installFee:num($('q_installfee').value)||0,
+    designIncluded:$('q_design').value==='1',designFee:num($('q_designfee').value)||0,
+    trialIncluded:$('q_trial').value==='1',trialFee:num($('q_trialfee').value)||0,
+    leadDays:num($('q_lead').value)||0,warranty:num($('q_warranty').value)||12,
+    validDays:num($('q_valid').value)||30,deviation:$('q_dev').value.trim(),
+    note:$('q_note').value.trim(),at:TODAY+' 12:00'
+  });
+  setFlash('o','该手机号已有报价，已更新为本次提交内容。');
+  refreshBadges();
+}
+
+/* ======================= 初始化 ======================= */
+document.querySelectorAll('#nav a').forEach(a=>{a.onclick=()=>go(a.dataset.p);});
+/* 二维码扫出来的链接形如 …?p=s1&d=D-2026-014&x=… → 直接进入供应商扫码视图
+   带 x 时用链接自带的需求数据渲染（原型无后端，手机端取不到研发本地数据） */
+const UP=urlParams();
+if(UP.p==='s1'||UP.p==='scan')enterScan(UP.d,UP.x);
+else go('list');
+</script>
+</body>
+</html>
