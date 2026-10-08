@@ -43,10 +43,20 @@ node tests/verify_budget.js   27 项通过
 
 ## 同步到 GitHub Pages
 
+方式一：git push（网络正常时）
+
 ```bash
 cp 研发供应商资源平台_原型.html gh-pages-site/index.html
 cd gh-pages-site
 git add -A && git commit -m "更新原型" && git push
 ```
 
-推送后约 1 分钟，Pages 自动重新构建。
+方式二：API 同步（公司网络把 github.com:443 掐掉时的兜底）
+
+```bash
+node update_remote.js "更新原型"
+```
+
+只上传内容有变的文件，约 1 分钟后 Pages 生效。
+
+> 注意：用方式二之后，本地 git 历史会落后远程一个提交，下次用方式一前先执行 `git pull --rebase origin main`。
