@@ -676,36 +676,88 @@ async function doLogin(){
     boot();
   }catch(e){renderLogin(e.message||'登录失败',e.html);}
 }
-/* 二维码导出为 PNG 图片 —— 发微信 / 贴需求单都用它 */
-function downloadQr(){
+/* 二维码画成 600×672 的 PNG 画布 —— 转发微信 / 贴需求单都用它 */
+function qrCanvas(d,url){
+  return new Promise(function(res,rej){
+    let svg;
+    try{svg=QR.svg(url,8);}catch(e){rej(new Error('二维码生成失败：'+e.message));return;}
+    svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"');
+    const u=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+    const img=new Image();
+    img.onload=function(){
+      const cv=document.createElement('canvas');cv.width=600;cv.height=672;
+      const g=cv.getContext('2d');
+      g.fillStyle='#fff';g.fillRect(0,0,600,672);
+      g.drawImage(img,0,0,600,600);
+      g.textAlign='center';
+      g.fillStyle='#0f172a';g.font='bold 24px "Microsoft YaHei",sans-serif';
+      g.fillText(String(d.title||'').slice(0,20),300,634);
+      g.fillStyle='#64748b';g.font='17px "Microsoft YaHei",sans-serif';
+      g.fillText(d.id+'  微信扫一扫填报价',300,660);
+      URL.revokeObjectURL(u);
+      res(cv);
+    };
+    img.onerror=function(){URL.revokeObjectURL(u);rej(new Error('图片生成失败，请改用「复制」把链接发到微信。'));};
+    img.src=u;
+  });
+}
+function qrBlob(cv){return new Promise(function(res){cv.toBlob(function(b){res(b);},'image/png');});}
+/* 供应商手机打不打得开这个码：内网地址 / 非 https 要提前说 */
+function qrReachWarn(url){
+  const lan=/\/\/(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(url);
+  if(!lan&&/^https:\/\//.test(url))return '';
+  return '当前扫码链接是 <span class="mono">'+esc(url.split('?')[0])+'</span>'
+    +(lan?'（内网地址），<b>只有和服务器同一个 WiFi 的手机才打得开</b>。发给外部供应商前，'
+         +'请先给后端配一个 https 公网/穿透地址，再回来重新转发。'
+         :'，不是 https，微信里可能打不开或被拦截，建议换成 https 地址。');
+}
+/* 一键转发：① 系统分享面板（可直接选微信） ② 复制图片去微信粘贴 ③ 下载 PNG 兜底 */
+async function shareQr(){
   const d=DM(curDemand);if(!d){setFlash('r','请先选择一个需求');return;}
   const url=qrUrl(d);
-  let svg;
-  try{svg=QR.svg(url,8);}catch(e){setFlash('r','二维码生成失败：'+e.message);return;}
-  svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"');
-  const blob=new Blob([svg],{type:'image/svg+xml'});
-  const u=URL.createObjectURL(blob);
-  const img=new Image();
-  img.onload=function(){
-    const cv=document.createElement('canvas');cv.width=600;cv.height=672;
-    const g=cv.getContext('2d');
-    g.fillStyle='#fff';g.fillRect(0,0,600,672);
-    g.drawImage(img,0,0,600,600);
-    g.textAlign='center';
-    g.fillStyle='#0f172a';g.font='bold 24px "Microsoft YaHei",sans-serif';
-    g.fillText(String(d.title||'').slice(0,20),300,634);
-    g.fillStyle='#64748b';g.font='17px "Microsoft YaHei",sans-serif';
-    g.fillText(d.id+'  微信扫一扫填报价',300,660);
-    const a=document.createElement('a');
-    a.href=cv.toDataURL('image/png');
-    a.download='询价单_'+d.id+'.png';
-    document.body.appendChild(a);a.click();a.remove();
-    URL.revokeObjectURL(u);
-    setFlash('g','二维码图片已下载 —— 微信里直接发图片，对方长按识别即可。');
-    go(curPage);
-  };
-  img.onerror=function(){setFlash('r','图片生成失败，请改用「复制」把链接发到微信。');};
-  img.src=u;
+  let cv;
+  try{cv=await qrCanvas(d,url);}catch(e){setFlash('r',e.message);go(curPage);return;}
+  const blob=await qrBlob(cv);
+  const warn=qrReachWarn(url), fname='询价单_'+d.id+'.png';
+  const text='【询价单 '+d.id+'】'+(d.title||'')+'　请微信扫一扫填报价（免注册）：'+url;
+  let file=null;
+  try{file=new File([blob],fname,{type:'image/png'});}catch(e){}
+  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file],title:'询价单 '+d.id,text:text});
+      setFlash('g','已打开系统分享面板 —— 选「微信」发给供应商即可。'+(warn?'<br>⚠ '+warn:''));
+      go(curPage);return;
+    }catch(e){
+      if(e&&e.name==='AbortError'){setFlash('b','已取消分享。也可以点「复制二维码」再到微信里粘贴。');go(curPage);return;}
+    }
+  }
+  if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob,
+        'text/plain':new Blob([text],{type:'text/plain'})})]);
+      setFlash('g','二维码已复制到剪贴板 —— 到微信聊天框按 <b>Ctrl+V</b>（手机长按粘贴）发送即可。'
+        +(warn?'<br>⚠ '+warn:''));
+      go(curPage);return;
+    }catch(e){}
+  }
+  const a=document.createElement('a');
+  a.href=cv.toDataURL('image/png');a.download=fname;
+  document.body.appendChild(a);a.click();a.remove();
+  setFlash('g','当前浏览器不支持直接分享/复制，已下载 PNG —— 微信里发图片，对方长按识别即可。'
+    +(warn?'<br>⚠ '+warn:''));
+  go(curPage);
+}
+/* 兜底：只想要一张图 */
+async function downloadQr(){
+  const d=DM(curDemand);if(!d){setFlash('r','请先选择一个需求');return;}
+  let cv;
+  try{cv=await qrCanvas(d,qrUrl(d));}catch(e){setFlash('r',e.message);go(curPage);return;}
+  const a=document.createElement('a');
+  a.href=cv.toDataURL('image/png');a.download='询价单_'+d.id+'.png';
+  document.body.appendChild(a);a.click();a.remove();
+  setFlash('g','二维码图片已下载 —— 微信里发图片，对方长按识别即可。'
+    +(qrReachWarn(qrUrl(d))?'<br>⚠ '+qrReachWarn(qrUrl(d)):''));
+  go(curPage);
 }
 
 /* ---- 需求「随链接走」----------------------------------------------------
@@ -856,6 +908,32 @@ function enterScan(did,x){
 }
 const CERT_LABEL={'NDA':'需签 NDA','认证':'需体系/行业认证','不外协':'关键工序不得外协','试机':'需带料试机'};
 const CERT_KEYS=['NDA','认证','不外协','试机'];
+/* 经营范围词库（即「库关键词」）：厂家档案、手动补录、需求单三处都从这一份里勾选，
+   保证需求侧和供应商侧口径一致 —— 改词表就改这一行。 */
+const SCOPE_POOL=[
+  '精密机加','钣金加工','激光切割','折弯成型','焊接机架','铝型材框架',
+  '表面处理','热处理','线切割','冲压','铸锻造','注塑成型',
+  '工装夹具','模具制造','直线模组','伺服与传动','气动液压','电气集成',
+  '视觉检测','机器人应用','标准件外购','专机定制','整机装配调试','输送线体'];
+/* 经营范围勾选组：grp 用来区分同一页面上的不同表单（需求单 / 厂家档案 / 手动补录） */
+function scopeChk(grp,sel){
+  const cur=sel||[];
+  return '<div class="chk">'+SCOPE_POOL.map(function(k){
+    const on=cur.indexOf(k)>=0;
+    return '<label class="'+(on?'on':'')+'"><input type="checkbox" data-scope="'+k+'" data-scope-g="'+grp+'"'
+      +(on?' checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+k+'</label>';
+  }).join('')+'</div>';
+}
+function readScope(grp){
+  return SCOPE_POOL.filter(function(k){
+    const el=document.querySelector('[data-scope="'+k+'"][data-scope-g="'+grp+'"]');
+    return !!(el&&el.checked);});
+}
+/* 判定用：需求的每一项经营范围，供应商都得有 */
+function scopeMissing(d,s){
+  const need=(d&&d.scope)||[],have=(s&&s.scope)||[];
+  return need.filter(function(x){return have.indexOf(x)<0;});
+}
 
 let SUPPLIERS=[];              /* 由后端 /api/state 下发 */
 
@@ -974,10 +1052,18 @@ function judge(d,s){
   else if(s.cycle===0){cyOk=false;cyTxt='厂不做节拍类产品（档案填 0）→ <b>无法满足节拍要求</b>';}
   else{cyOk=d.cycle>=s.cycle;
     cyTxt='需求 '+d.cycle+'s/件 vs 厂 '+s.cycle+'s/件 → '+(cyOk?'厂做得到':'<b>厂达不到</b>');}
-  const r1Unknown=[sizeOk,accOk,cyOk].indexOf(null)>=0;
-  const r1Fail=[sizeOk,accOk,cyOk].indexOf(false)>=0;
+  let scopeOk=null,scopeTxt='';
+  const needS=d.scope||[],haveS=s.scope||[];
+  if(!needS.length){scopeOk=true;scopeTxt='本需求未指定经营范围，跳过';}
+  else if(!haveS.length){scopeTxt='该厂未填经营范围，无法判定';}
+  else{const missS=scopeMissing(d,s);
+    scopeOk=!missS.length;
+    scopeTxt='需求要：'+needS.join('、')+'<br>厂经营：'+haveS.join('、')
+      +(scopeOk?' → <b>全部覆盖</b>':' → <b>不做 '+missS.join('、')+'</b>');}
+  const r1Unknown=[sizeOk,accOk,cyOk,scopeOk].indexOf(null)>=0;
+  const r1Fail=[sizeOk,accOk,cyOk,scopeOk].indexOf(false)>=0;
   add('R1',r1Fail?false:r1Unknown?null:true,
-    '尺寸：'+sizeTxt+'<br>精度：'+accTxt+'<br>节拍：'+cyTxt);
+    '尺寸：'+sizeTxt+'<br>精度：'+accTxt+'<br>节拍：'+cyTxt+'<br>经营范围：'+scopeTxt);
   /* R2 */
   const left=daysLeft(d.delivery);
   const qtyOk=(d.qty||0)>=(s.moq||0);
@@ -1167,8 +1253,9 @@ function rForm(){
     <div class="sub">整机 / 构配件 / 来图加工 共用这一张表</div>
     <div class="r"><button class="btn" onclick="go('list')">取消</button></div></div>
   <div class="card-b">
-    <div class="alert b"><i>!</i><div><b>只填 12 项，其中 9 项必填。</b>
-      「关键规格」三项直接决定匹配档位 —— 尺寸超出即判「不符」，这是唯一硬门槛。</div></div>
+    <div class="alert b"><i>!</i><div><b>只填 13 项，其中 10 项必填。</b>
+      「关键规格」三项 +「所需经营范围」同属判定 R1（唯一硬门槛）——
+      尺寸超出、或厂家不做其中某一项经营范围，即判「不符」。</div></div>
     <div class="grid g2">
       <div class="fg"><label>需求标题<span class="req">*</span></label>
         <input data-k="title" type="text" value="${esc(v('title'))}" placeholder="如：六工位转盘式装配机（研发样机）"></div>
@@ -1220,6 +1307,10 @@ function rForm(){
         <input data-k="deadline" type="text" value="${esc(v('deadline'))}" placeholder="2026-09-28 17:00">
         <div class="hint">预算项已取消：价格合不合适在比价表里用实际报价判断</div></div>
     </div>
+    <div class="fg"><label>所需经营范围<span class="req">*</span>
+      <span class="op">对应判定 R1 —— 供应商的经营范围必须<b>全部覆盖</b>这几项，缺一项即判「不符」</span></label>
+      ${scopeChk('demand',d?(d.scope||[]):[])}
+      <div class="hint">从「库关键词」里勾选，和供应商库里的厂家用的是同一份词表</div></div>
     <div class="fg"><label>资质要求<span class="req">*</span>
       <span class="op">对应判定 R3，厂缺任一项即落「可联系」</span></label>
       <div class="chk">${CERT_KEYS.map(c=>
@@ -1260,6 +1351,8 @@ function saveDemand(draft){
     owner:'提出需求的研发人员',ownerPhone:'联系电话'}[k]); });
   const certs=CERT_KEYS.filter(c=>{const el=document.querySelector('[data-c="'+c+'"]');return el&&el.checked;});
   if(!certs.length)miss.push('资质要求（至少勾一项，或明确无要求）');
+  const scope=readScope('demand');
+  if(!scope.length)miss.push('所需经营范围（至少勾一项）');
   /* 构件清单：名称/规格/数量必填，否则供应商无从报价 */
   const items=formItems.map(function(it){
     return {name:String(it.name||'').trim(),spec:String(it.spec||'').trim(),
@@ -1281,7 +1374,7 @@ function saveDemand(draft){
     desc:formVal('desc'),size:formVal('size'),
     acc:num(formVal('acc')),cycle:num(formVal('cycle'))||0,qty:num(formVal('qty'))||1,
     delivery:formVal('delivery'),
-    place:formVal('place'),deadline:formVal('deadline'),certs:certs,
+    place:formVal('place'),deadline:formVal('deadline'),certs:certs,scope:scope,
     acceptance:formVal('acceptance'),note:formVal('note'),drawings:pendingFiles.slice(),
     items:items
   });
@@ -1427,12 +1520,14 @@ function rInvite(){
         <div class="alert ${packed?'g':'o'}" style="margin-top:9px;text-align:left;font-size:11.5px;padding:8px 10px">
           <i>${packed?'✓':'!'}</i><div>${packTip}</div></div>
         <div style="margin-top:9px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-          <button class="btn sm pri" onclick="downloadQr()">下载二维码图片</button>
+          <button class="btn sm pri" onclick="shareQr()">转发到微信</button>
+          <button class="btn sm" onclick="downloadQr()">下载图片</button>
           <button class="btn sm" onclick="openScan()">本机打开扫码页</button>
           <button class="btn sm" onclick="exportInviteHtml()">导出询价页 HTML</button>
         </div>
         <div class="sm mut" style="margin-top:6px;text-align:center">
-          转发微信：点「下载二维码图片」拿到 PNG，微信里发图片 / 长按识别即可</div>
+          发微信：点「<b>转发到微信</b>」→ 系统分享面板里选微信直接发图；
+          浏览器不支持时会改为复制图片，去微信聊天框粘贴即可</div>
       </div>
       <div style="flex:1;min-width:300px">
         <h4 style="font-size:13px;margin-bottom:8px">扫码页展示的需求摘要（文字版）</h4>
@@ -1445,6 +1540,7 @@ function rInvite(){
           <div class="kv"><span class="k">交期</span><span class="v">${esc(d.delivery)}（剩 ${daysLeft(d.delivery)} 天）</span></div>
           <div class="kv"><span class="k">交付地</span><span class="v">${esc(d.place)}</span></div>
           <div class="kv"><span class="k">资质</span><span class="v">${d.certs.length?d.certs.map(c=>CERT_LABEL[c]).join('、'):'未指定'}</span></div>
+          ${(d.scope||[]).length?`<div class="kv"><span class="k">所需经营范围</span><span class="v b">${d.scope.map(x=>esc(x)).join('、')}</span></div>`:''}
           ${d.acceptance?`<div class="kv"><span class="k">验收</span><span class="v">${esc(d.acceptance)}</span></div>`:''}
           <div class="kv"><span class="k">截止</span><span class="v b">${esc(d.deadline)}</span></div>
         </div>
@@ -1876,6 +1972,9 @@ function openLibNew(){
       <div class="fg"><label>标签</label><input data-l="tags" placeholder="整机能力强,价格低">
         <div class="hint">逗号分隔，选填</div></div>
     </div>
+    <div class="fg"><label>经营范围<span class="op">选填 · 从库关键词里勾选</span></label>
+      ${scopeChk('lib',[])}
+      <div class="hint">这家能做哪些类别；不填则该厂对需求只能判「待确认」</div></div>
     <div class="fg"><label>做过什么 / 擅长<span class="op">选填</span></label>
       <textarea data-l="cases" placeholder="一行一条，最多 3 条"></textarea></div>
     <hr class="sp">
@@ -1913,7 +2012,7 @@ function libNewSave(){
     maxSize:g('maxSize'),acc:n(g('acc'),null),cycle:0,
     priceMin:n(g('priceMin'),null),priceMax:n(g('priceMax'),null),
     unit:g('unit')||'整机',minAmount:n(g('minAmount'),0),moq:1,sample:true,
-    leadDays:n(g('leadDays'),null),
+    leadDays:n(g('leadDays'),null),scope:readScope('lib'),
     cases:cases.length?cases:(s.cases||[]),
     note:g('note')||(s.note||'手动补录：能力信息待补（补齐后参与匹配判定）')
   });
@@ -1963,12 +2062,13 @@ function libNote(sid,txt){
   go(curPage);
 }
 function libExport(){
-  const rows=[['公司','地区','联系人','电话','入库档位','库内状态','来源需求','已确认报价数','最低到手价(元)','最近接触','标签']];
+  const rows=[['公司','地区','联系人','电话','入库档位','库内状态','来源需求','已确认报价数','最低到手价(元)','最近接触','标签','经营范围']];
   LIB.forEach(function(e){
     const s=SM(e.sid);if(!s)return;
     rows.push([s.name,s.city,s.contact,s.phone,libGrade(e),e.status,
       (e.froms||[]).map(f=>f.did+'/'+f.grade).join(' '),
-      libQuotes(e).length,libBest(e)==null?'':libBest(e),e.touchAt||'—',(e.tags||[]).join('、')]);
+      libQuotes(e).length,libBest(e)==null?'':libBest(e),e.touchAt||'—',(e.tags||[]).join('、'),
+      (s.scope||[]).join('、')||'—']);
   });
   const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
   const a=document.createElement('a');
@@ -2233,7 +2333,9 @@ function rSupplier(){
     <th style="width:110px">资质</th><th class="rd" style="width:120px">操作</th></tr></thead>
   <tbody>${SUPPLIERS.map(s=>{const le=libOf(s.id);return `<tr>
     <td><div class="b">${esc(s.name)}${le?`<span class="tag ${LIB_STAG[le.status]}" style="margin-left:5px">库 · ${le.status}</span>`:''}</div>
-      <div class="sm mut">${s.cases.length} 条案例${s.acc==null?' · <span style="color:var(--wn)">精度待补</span>':''}</div></td>
+      <div class="sm mut">${s.cases.length} 条案例${s.acc==null?' · <span style="color:var(--wn)">精度待补</span>':''}</div>
+      ${(s.scope||[]).length?`<div class="sm" style="margin-top:2px">${s.scope.slice(0,5).map(t=>'<span class="tag gr">'+esc(t)+'</span>').join(' ')}${s.scope.length>5?'<span class="mut sm">+'+(s.scope.length-5)+'</span>':''}</div>`
+        :'<div class="sm" style="color:var(--wn)">经营范围未填</div>'}</td>
     <td class="sm">${esc(s.city)}</td>
     <td class="sm">${esc(s.contact)}<div class="mut">${esc(s.phone)}</div></td>
     <td class="sm mono">${esc(s.maxSize)}</td>
@@ -2260,7 +2362,7 @@ function libList(){
   const kw=libF.kw.trim();
   if(kw)a=a.filter(e=>{const s=SM(e.sid);
     return s.name.indexOf(kw)>=0||s.city.indexOf(kw)>=0||String(s.contact).indexOf(kw)>=0
-      ||(e.tags||[]).join('、').indexOf(kw)>=0;});
+      ||(e.tags||[]).join('、').indexOf(kw)>=0||(s.scope||[]).join('、').indexOf(kw)>=0;});
   if(libF.status)a=a.filter(e=>e.status===libF.status);
   else a=a.filter(e=>e.status!=='已淘汰');           /* 默认隐藏已淘汰 */
   if(libF.did)a=a.filter(e=>(e.froms||[]).some(f=>f.did===libF.did));
@@ -2300,7 +2402,7 @@ function rLib(){
       <button class="btn sm" onclick="libExport()">导出 CSV</button></div></div>
   <div class="card-b">
     <div class="flex" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <input id="f_kw" value="${esc(libF.kw)}" placeholder="搜公司 / 地区 / 联系人 / 标签"
+      <input id="f_kw" value="${esc(libF.kw)}" placeholder="搜公司 / 地区 / 联系人 / 标签 / 经营范围"
         style="width:230px" onchange="libSetF('kw',this.value)">
       <select id="f_st" style="width:auto;padding:6px 9px" onchange="libSetF('status',this.value)">
         <option value="">全部状态（隐藏已淘汰）</option>
@@ -2325,6 +2427,7 @@ function rLib(){
       return `<tr${e.status==='已淘汰'?' style="opacity:.55"':''}>
         <td><div class="b">${esc(s.name)}</div>
           <div class="sm mut">${esc(s.city)} · ${esc(s.contact)} ${esc(s.phone)}</div>
+          ${(s.scope||[]).length?`<div class="sm" style="margin-top:2px"><span class="mut">经营范围：</span>${s.scope.map(t=>'<span class="tag gr">'+esc(t)+'</span>').join(' ')}</div>`:'<div class="sm mut">经营范围未填 → 判定始终是「待确认」</div>'}
           ${(e.tags||[]).length?`<div>${e.tags.map(t=>'<span class="tag gr">'+esc(t)+'</span>').join(' ')}</div>`:''}</td>
         <td><span class="tag ${libGrade(e)==='推荐'?'g':'b'}">${libGrade(e)}</span>
           <div class="sm mut">${(e.froms||[]).length} 次入库</div></td>
@@ -2448,7 +2551,8 @@ function openSup(id){
   $('dwT').textContent=s?'编辑 · '+s.name:'新增供应商';
   $('dwB').innerHTML=`
     <div class="alert b"><i>!</i><div>必填 8 项：公司名称、地区、联系人+电话、最大加工尺寸、典型精度、
-      可达节拍、价格量级、接单门槛。其余选填 —— <b>选填留空不会报错，只会让判定落「可联系」或「待确认」。</b></div></div>
+      可达节拍、价格量级、接单门槛。其余选填 —— <b>选填留空不会报错，只会让判定落「可联系」或「待确认」。</b>
+      「经营范围」虽是选填，但<b>不勾就会一直停在「待确认」</b>，建议顺手勾好。</div></div>
     <div class="grid g2">
       <div class="fg"><label>公司名称<span class="req">*</span></label><input data-s="name" value="${esc(v('name'))}"></div>
       <div class="fg"><label>地区 / 城市<span class="req">*</span></label><input data-s="city" value="${esc(v('city'))}" placeholder="江苏 苏州"></div>
@@ -2479,6 +2583,10 @@ function openSup(id){
     <div class="fg"><label>资质<span class="op">选填</span></label>
       <div class="chk">${CERT_KEYS.map(c=>`<label class="${s&&s.certs.indexOf(c)>=0?'on':''}"><input type="checkbox" data-sc="${c}"
         ${s&&s.certs.indexOf(c)>=0?'checked':''} onchange="this.parentNode.classList.toggle('on',this.checked)">${CERT_LABEL[c]}</label>`).join('')}</div></div>
+    <div class="fg"><label>经营范围<span class="op">选填 · 从库关键词里勾选</span></label>
+      ${scopeChk('sup',s?(s.scope||[]):[])}
+      <div class="hint">判定 R1：需求所需的每一项经营范围都要在这里，缺一项即判「不符」；
+        <b>完全不选 → 该厂对所有需求都只能判「待确认」</b></div></div>
     <div class="fg"><label>做过什么<span class="op">选填 · 3 条以内，只展示不判定</span></label>
       <textarea data-s="cases" placeholder="一行一条">${esc(s?(s.cases||[]).join('\n'):'')}</textarea></div>
     <div class="fg"><label>评价备注<span class="op">选填</span></label>
@@ -2507,6 +2615,7 @@ function saveSup(id){
     priceMin:num(g('priceMin')),priceMax:num(g('priceMax')),unit:g('unit')||'整机',
     minAmount:num(g('minAmount'))||0,moq:num(g('moq'))||1,sample:g('sample')==='1',
     leadDays:num(g('leadDays')),certs:CERT_KEYS.filter(c=>{const e=document.querySelector('[data-sc="'+c+'"]');return e&&e.checked;}),
+    scope:readScope('sup'),
     cases:g('cases').split('\n').map(x=>x.trim()).filter(Boolean).slice(0,3),note:g('note')
   });
   if(!id)SUPPLIERS.push(s);
