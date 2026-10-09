@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>询价单报价</title>
+<style>
+:root{
+  --bg:#f1f5f9;--card:#fff;--bd:#e2e8f0;--tx:#0f172a;--tx2:#334155;--mut:#64748b;
+  --pri:#2563eb;--ok:#16a34a;--wn:#d97706;--er:#dc2626;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  padding:0 0 40px}
+.wrap{max-width:640px;margin:0 auto;padding:12px}
+.ttl{background:var(--pri);color:#fff;padding:14px 16px}
+.ttl h1{margin:0;font-size:16px;font-weight:700}
+.ttl .sub{font-size:12px;opacity:.9;margin-top:2px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.card-h{padding:12px 14px;border-bottom:1px solid var(--bd)}
+.card-h h3{margin:0;font-size:15px}
+.card-h .sub{font-size:12px;color:var(--mut);margin-top:3px;line-height:1.5}
+.card-b{padding:12px 14px}
+.kv{display:flex;gap:10px;padding:5px 0;font-size:13px;border-bottom:1px dashed #eef2f7}
+.kv:last-child{border-bottom:0}
+.kv .k{width:74px;flex:none;color:var(--mut)}
+.kv .v{flex:1;word-break:break-all}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid var(--bd);padding:7px 6px;text-align:left;vertical-align:top}
+th{background:#f8fafc;font-weight:600;font-size:12px;color:var(--tx2)}
+td.num,th.num{text-align:right}
+td.ct,th.ct{text-align:center}
+.pfg{margin-bottom:11px}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+label .req{color:var(--er);margin-left:2px}
+input,textarea,select{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:7px;
+  font-size:14px;background:#fff;color:var(--tx);font-family:inherit}
+input:focus,textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+input[type=number]{font-variant-numeric:tabular-nums}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.hint{font-size:11.5px;color:var(--mut);margin-top:4px;line-height:1.5}
+.btn{display:inline-block;padding:10px 14px;border:1px solid var(--bd);border-radius:8px;
+  background:#fff;color:var(--tx);font-size:14px;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn:active{opacity:.85}
+.btn.block{display:block;width:100%;text-align:center}
+.btn.big{padding:13px 14px;font-size:15px}
+.alert{padding:10px 12px;border-radius:8px;font-size:12.5px;display:flex;gap:8px;line-height:1.6;margin-bottom:10px}
+.alert i{font-style:normal;font-weight:700;width:16px;flex:none;text-align:center}
+.alert.b{background:#eff6ff;color:#1e40af}
+.alert.o{background:#fffbeb;color:#92400e}
+.alert.g{background:#f0fdf4;color:#166534}
+.alert.r{background:#fef2f2;color:#991b1b}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:#e2e8f0;color:var(--tx2)}
+.sumbar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--bd);
+  padding:10px 14px;display:flex;align-items:center;gap:10px}
+.sumbar .t{flex:1;font-size:12px;color:var(--mut)}
+.sumbar .t b{display:block;font-size:17px;color:var(--tx);font-variant-numeric:tabular-nums}
+.empty{text-align:center;padding:50px 20px;color:var(--mut)}
+.empty .ic{font-size:38px;margin-bottom:10px}
+.ok{text-align:center;padding:26px 16px}
+.ok .ic{font-size:46px;color:var(--ok);line-height:1}
+.mono{font-family:Consolas,Monaco,monospace}
+</style>
+</head>
+<body>
+<div class="ttl">
+  <h1>询价单报价</h1>
+  <div class="sub" id="hdSub">免注册 · 按构件逐项报单价 · 提交即送达研发</div>
+</div>
+<div class="wrap" id="app">
+  <div class="empty"><div class="ic">◌</div>正在加载询价单…</div>
+</div>
+
+<script>
+/* 供应商扫码页：只依赖「需求号 + 令牌」，内容全部实时从服务器取。
+   提交即写入服务器数据库，研发端刷新就能看到 —— 不需要回传码。 */
+const P=new URLSearchParams(location.search);
+const DID=P.get('d')||'',TOK=P.get('t')||'';
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(n)=>Number(n||0).toLocaleString('zh-CN',{maximumFractionDigits:2});
+let DEM=null,MINE=null,SUBMITTED=false;
+
+const CERT_LABEL={'NDA':'需签 NDA','认证':'需体系/行业认证','不外协':'关键工序不得外协','试机':'需带料试机'};
+
+async function api(p,opt){
+  const r=await fetch(p,opt);
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+  return j;
+}
+
+function fail(msg,detail){
+  $('app').innerHTML='<div class="empty"><div class="ic">⚠</div>'
+    +'<div style="font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px">'+esc(msg)+'</div>'
+    +(detail?'<div style="font-size:12.5px;line-height:1.7">'+esc(detail)+'</div>':'')
+    +'</div>';
+}
+
+async function load(){
+  if(!DID||!TOK)return fail('链接不完整','缺少需求号或访问令牌。请向研发重新要一条询价单链接。');
+  try{
+    const r=await api('/api/public/demand?d='+encodeURIComponent(DID)+'&t='+encodeURIComponent(TOK));
+    DEM=r.demand;
+  }catch(e){
+    return fail('打不开这张询价单',e.message+'<br><br>常见原因：链接被微信截断、需求已删除、或研发重新生成过二维码。请向研发要一条新链接。');
+  }
+  $('hdSub').textContent=DEM.id+' · 免注册 · 提交即送达研发';
+  render();
+}
+
+function itemRows(){
+  return (DEM.items||[]).map((it,i)=>{
+    const old=(MINE&&MINE.items||[]).filter(x=>x.i===i)[0];
+    const price=old?old.price:'';
+    const qty=Number(it.qty)||1;
+    return '<tr>'
+      +'<td class="ct">'+(i+1)+'</td>'
+      +'<td><div style="font-weight:600">'+esc(it.name)+'</div>'
+        +(it.spec?'<div class="hint" style="margin-top:2px">'+esc(it.spec)+'</div>':'')+'</td>'
+      +'<td class="ct" style="white-space:nowrap">'+esc(it.unit||'套')+'<br><span style="color:var(--mut)">×'+qty+'</span></td>'
+      +'<td style="width:92px"><input type="number" inputmode="decimal" id="p'+i+'" data-i="'+i+'" '
+        +'value="'+(price===''?'':price)+'" placeholder="单价" oninput="calc()"></td>'
+      +'<td class="num" style="width:76px" id="s'+i+'">—</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function render(){
+  const d=DEM;
+  const closed=d.closed;
+  $('app').innerHTML=`
+  <div class="card">
+    <div class="card-h"><h3>${esc(d.title)}</h3>
+      <div class="sub">${esc(d.place||'')} · 报价截止 ${esc(d.deadline||'')}</div></div>
+    <div class="card-b">
+      <div class="alert b"><i>!</i><div>图纸需签 NDA 后单独提供。对需求有疑问请联系提出人
+        <b>${esc(d.owner||'研发')}</b>${d.ownerPhone?'（'+esc(d.ownerPhone)+'）':''}。</div></div>
+      ${d.owner?`<div class="kv"><span class="k">提出人</span><span class="v"><b>${esc(d.owner)}</b>${d.ownerPhone?' · '+esc(d.ownerPhone):''}</span></div>`:''}
+      <div class="kv"><span class="k">描述</span><span class="v">${esc(d.desc||'')}</span></div>
+      <div class="kv"><span class="k">关键规格</span><span class="v">尺寸 ${esc(d.size||'')} mm · 精度 ±${esc(d.acc)} mm${d.cycle?' · 节拍 '+esc(d.cycle)+' s/件':''}</span></div>
+      <div class="kv"><span class="k">数量 / 交期</span><span class="v">${esc(d.qty)} · ${esc(d.delivery||'')}</span></div>
+      ${(d.certs||[]).length?`<div class="kv"><span class="k">资质</span><span class="v">${d.certs.map(c=>'<span class="tag">'+esc(CERT_LABEL[c]||c)+'</span>').join(' ')}</span></div>`:''}
+      ${d.acceptance?`<div class="kv"><span class="k">验收</span><span class="v">${esc(d.acceptance)}</span></div>`:''}
+    </div>
+  </div>
+
+  ${closed?`<div class="card"><div class="card-b"><div class="alert o"><i>!</i><div>
+    该询价单已于 <b>${esc(d.deadline||'')}</b> 截止或已被研发关闭，无法再提交。如有疑问请联系提出人。</div></div>
+    </div></div>`
+  :`
+  <div class="card">
+    <div class="card-h"><h3>报价信息</h3>
+      <div class="sub">带 <span style="color:var(--er)">*</span> 必填；价格单位：元</div></div>
+    <div class="card-b">
+      <div class="row">
+        <div class="pfg"><label>公司名称<span class="req">*</span></label>
+          <input id="company" placeholder="与营业执照一致" oninput="tryMine()"></div>
+      </div>
+      <div class="row">
+        <div class="pfg"><label>联系人<span class="req">*</span></label><input id="contact" placeholder="姓名"></div>
+        <div class="pfg"><label>手机号<span class="req">*</span></label>
+          <input id="phone" type="tel" inputmode="numeric" placeholder="11 位" oninput="tryMine()"></div>
+      </div>
+      <div class="hint" id="mineTip" style="margin:-4px 0 10px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>按构件逐项报单价</h3>
+      <div class="sub">数量由研发给定，单价由您填写，小计自动计算</div></div>
+    <div class="card-b" style="padding:8px">
+      <table>
+        <thead><tr><th class="ct" style="width:26px">序</th><th>构件 / 规格</th>
+          <th class="ct" style="width:58px">单位·数量</th><th class="num" style="width:90px">单价(元)</th>
+          <th class="num" style="width:70px">小计</th></tr></thead>
+        <tbody>${itemRows()}</tbody>
+        <tfoot><tr><td colspan="4" style="text-align:right;font-weight:600">构件合价</td>
+          <td class="num" style="font-weight:700" id="sum">0</td></tr></tfoot>
+      </table>
+      <div class="hint">某项做不了就留空，别填 0（0 会被当成不收费）。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>报价口径</h3>
+      <div class="sub">口径不一致是比价的最大坑，请如实勾选</div></div>
+    <div class="card-b">
+      <div class="kv" style="align-items:center"><span class="k">含税</span><span class="v">
+        <select id="tax" onchange="calc()"><option value="1">含税（专票）</option><option value="0">不含税</option></select>
+        <div class="row" style="margin-top:6px"><input id="taxrate" type="number" value="13" oninput="calc()">
+          <div class="hint" style="margin:0;align-self:center">税率 %</div></div></span></div>
+      <div class="kv" style="align-items:center"><span class="k">运费</span><span class="v">
+        <select id="freight" onchange="calc()"><option value="1">含运费</option><option value="0">运费另计</option></select>
+        <div class="row" style="margin-top:6px"><input id="freightfee" type="number" value="0" oninput="calc()">
+          <div class="hint" style="margin:0;align-self:center">运费 元</div></div></span></div>
+      <div class="kv" style="align-items:center"><span class="k">安装调试</span><span class="v">
+        <select id="install" onchange="calc()"><option value="1">含安装调试</option><option value="0">安装另计</option></select>
+        <div class="row" style="margin-top:6px"><input id="installfee" type="number" value="0" oninput="calc()">
+          <div class="hint" style="margin:0;align-self:center">安装费 元</div></div></span></div>
+      <div class="kv" style="align-items:center"><span class="k">设计费</span><span class="v">
+        <select id="design" onchange="calc()"><option value="1">含设计</option><option value="0">设计另计</option></select>
+        <div class="row" style="margin-top:6px"><input id="designfee" type="number" value="0" oninput="calc()">
+          <div class="hint" style="margin:0;align-self:center">设计费 元</div></div></span></div>
+      <div class="kv" style="align-items:center"><span class="k">带料试机</span><span class="v">
+        <select id="trial" onchange="calc()"><option value="1">含试机</option><option value="0">试机另计</option></select>
+        <div class="row" style="margin-top:6px"><input id="trialfee" type="number" value="0" oninput="calc()">
+          <div class="hint" style="margin:0;align-self:center">试机费 元</div></div></span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h3>商务条件</h3></div>
+    <div class="card-b">
+      <div class="row">
+        <div class="pfg"><label>交货周期（天）</label><input id="lead" type="number" placeholder="如 90"></div>
+        <div class="pfg"><label>质保（月）</label><input id="warranty" type="number" value="12"></div>
+      </div>
+      <div class="pfg"><label>报价有效期（天）</label><input id="valid" type="number" value="30"></div>
+      <div class="pfg"><label>偏离说明<span style="font-weight:400;color:var(--mut)"> · 与需求不一致的地方请写明</span></label>
+        <input id="dev" placeholder="如：检测工位由 6 项减为 4 项；防护罩改为选配"></div>
+      <div class="pfg"><label>备注</label><input id="note" placeholder="选填"></div>
+    </div>
+  </div>
+
+  <div class="sumbar">
+    <div class="t">构件合价（含额外费用前）<b id="barSum">¥ 0</b></div>
+    <button class="btn pri big" onclick="submit()" id="btn">提交报价</button>
+  </div>`}
+  `;
+  calc();
+  if(MINE)notice('g','您已提交过一次报价（'+esc(MINE.at||'')+'），下面的内容已带出，改完再提交会覆盖上一次。');
+}
+
+function notice(k,txt){
+  const el=$('mineTip');
+  if(el)el.innerHTML='<div class="alert '+k+'" style="margin:0"><i>'+(k==='g'?'✓':'!')+'</i><div>'+txt+'</div></div>';
+}
+
+function calc(){
+  let sum=0;
+  (DEM.items||[]).forEach((it,i)=>{
+    const el=$('p'+i);if(!el)return;
+    const p=parseFloat(el.value);
+    const q=Number(it.qty)||1;
+    const sub=(isNaN(p)?0:p*q);
+    const cell=$('s'+i);if(cell)cell.textContent=isNaN(p)?'—':fmt(Math.round(sub));
+    sum+=sub;
+  });
+  const extra=(function(){
+    let e=0;
+    if($('freight')&&$('freight').value==='0')e+=parseFloat($('freightfee').value)||0;
+    if($('install')&&$('install').value==='0')e+=parseFloat($('installfee').value)||0;
+    if($('design')&&$('design').value==='0')e+=parseFloat($('designfee').value)||0;
+    if($('trial')&&$('trial').value==='0')e+=parseFloat($('trialfee').value)||0;
+    return e;
+  })();
+  const s=$('sum');if(s)s.textContent=fmt(Math.round(sum));
+  const b=$('barSum');if(b)b.textContent='¥ '+fmt(Math.round(sum+extra));
+  return sum;
+}
+
+/* 同手机号提交过 → 自动带出上次内容，避免重复劳动 */
+let mineTimer=null;
+function tryMine(){
+  clearTimeout(mineTimer);
+  mineTimer=setTimeout(async()=>{
+    const phone=($('phone')?$('phone').value:'').replace(/\s/g,'');
+    if(phone.length<11||SUBMITTED)return;
+    try{
+      const r=await api('/api/public/mine?d='+encodeURIComponent(DID)+'&t='+encodeURIComponent(TOK)
+        +'&phone='+encodeURIComponent(phone));
+      if(r.quote&&!MINE){MINE=r.quote;render();}
+    }catch(e){}
+  },400);
+}
+
+async function submit(){
+  const company=($('company').value||'').trim();
+  const contact=($('contact').value||'').trim();
+  const phone=($('phone').value||'').trim();
+  if(!company||!contact||!phone){
+    alert('公司名称、联系人、手机号三项必填。');return;
+  }
+  const items=[];
+  (DEM.items||[]).forEach((it,i)=>{
+    const el=$('p'+i);if(!el)return;
+    const v=parseFloat(el.value);
+    items.push({i:i,name:it.name,spec:it.spec||'',unit:it.unit||'套',
+      qty:Number(it.qty)||1,price:isNaN(v)?0:v});
+  });
+  if(!items.some(x=>x.price>0)){alert('至少要报一项单价。');return;}
+  const btn=$('btn');if(btn){btn.disabled=true;btn.textContent='提交中…';}
+  try{
+    const r=await api('/api/public/quote',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({d:DID,t:TOK,company:company,contact:contact,phone:phone,items:items,
+        taxIncluded:$('tax').value==='1',taxRate:parseFloat($('taxrate').value)||13,
+        freightIncluded:$('freight').value==='1',freight:parseFloat($('freightfee').value)||0,
+        installIncluded:$('install').value==='1',installFee:parseFloat($('installfee').value)||0,
+        designIncluded:$('design').value==='1',designFee:parseFloat($('designfee').value)||0,
+        trialIncluded:$('trial').value==='1',trialFee:parseFloat($('trialfee').value)||0,
+        leadDays:parseFloat($('lead').value)||null,warranty:parseFloat($('warranty').value)||12,
+        validDays:parseFloat($('valid').value)||30,
+        deviation:$('dev').value.trim(),note:$('note').value.trim()})});
+    SUBMITTED=true;
+    $('app').innerHTML='<div class="card"><div class="ok">'
+      +'<div class="ic">✓</div>'
+      +'<h3 style="margin:12px 0 6px">报价已送达研发</h3>'
+      +'<div style="color:var(--mut);font-size:13px;line-height:1.7">'
+      +esc(company)+' · 构件合价 <b style="color:var(--tx)">¥ '+fmt(r.total)+'</b><br>'
+      +esc(r.msg||'')+'<br>报价编号 '+esc(r.quoteId||'')+'</div>'
+      +'<div class="alert b" style="margin-top:14px;text-align:left"><i>!</i><div>'
+      +'不需要再截图发回去了 —— 研发电脑上已经能看到这份报价。'
+      +'如果价格有变动，重新扫码填写提交即可覆盖。</div></div>'
+      +'<button class="btn block" style="margin-top:12px" onclick="location.reload()">再填一版 / 返回</button>'
+      +'</div></div>';
+    window.scrollTo(0,0);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='提交报价';}
+    alert('提交失败：'+e.message);
+  }
+}
+
+load();
+</script>
+</body>
+</html>
