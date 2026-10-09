@@ -475,12 +475,13 @@ const API={
     }
     const raw=await r.text().catch(function(){return '';});
     let j=null;try{j=JSON.parse(raw);}catch(e){j=null;}
-    if(!r.ok){
-      if(r.status===404&&/^\s*</.test(raw))
-        throw new Error('后端地址 '+netLabel()+' 上没有这个接口（返回了网页）。'
-          +'前端和后端不在同一个域名时，请在登录页填「后端地址」');
-      throw new Error((j&&j.error)||('HTTP '+r.status));
+    const looksHtml=/^\s*</.test(raw)||/^\s*<!doctype/i.test(raw);
+    if(looksHtml){
+      /* 富文本提示走 e.html，纯文本走 e.message —— 两个消费方各自取用 */
+      const h=staticSiteHint();
+      throw Object.assign(new Error(h.replace(/<[^>]+>/g,'')),{html:h});
     }
+    if(!r.ok)throw new Error((j&&j.error)||('HTTP '+r.status));
     API_OFFLINE=false;return j||{};
   },
   get(p){return this.req(p);},
@@ -534,6 +535,39 @@ function saveDB(){
 }
 function loadDB(){return false;}            /* 兼容旧调用点：数据一律从后端取 */
 function netLabel(){return API.base||(isHttp()?location.origin:'(本机)');}
+/* 把「填了个静态站地址」这个最常见的坑，直接说成人话 */
+function staticSiteHint(){
+  var b=netLabel(),pre='';
+  try{
+    if(/github\.io$|vercel\.app$|netlify\.app$|pages\.dev$/.test(String(b)))
+      pre='<b>'+esc(String(b))+'</b> 是静态网站（GitHub Pages 之类），它只能放网页，跑不了后端接口。';
+    else if(!API.base&&/github\.io$/.test(location.hostname))
+      pre='当前页面托管在 GitHub Pages 上 —— 那只是前端，没有 /api 接口。';
+    else
+      pre='<b>'+esc(String(b))+'</b> 上没有这个接口（返回的是网页，不是 JSON）。';
+  }catch(e){pre='后端地址上没有这个接口（返回的是网页）。';}
+  return pre+'<br>后端必须是<b>正在跑 node server.js 的那台机器</b>：本机填 '
+    +'<span class="mono">http://localhost:3000</span>，同事用 <span class="mono">http://192.168.x.x:3000</span>，'
+    +'发给外部供应商要穿透或服务器给的 <span class="mono">https://域名</span>。';
+}
+/* 登录页「测试连接」：先验证地址通不通，再输口令，少走弯路 */
+async function testApi(){
+  const val=function(id){const e=$(id);return e?String(e.value||'').trim():'';};
+  const base=val('rdapi').replace(/\/+$/,'');
+  const box=$('apitest');
+  if(box)box.innerHTML='<div class="sm mut">正在测试 '+esc(base||'（留空 = 与当前页面同源）')+' …</div>';
+  let msg='',cls='r',ok=false;
+  try{
+    const r=await fetch((base||'')+'/api/ping');
+    const t=await r.text();
+    let j=null;try{j=JSON.parse(t);}catch(e){}
+    if(j&&j.ok){ok=true;cls='g';msg='<b>通了</b> —— 这就是可用的后端地址，直接填姓名和口令登录即可。';}
+    else if(/^\s*</.test(t)){msg=staticSiteHint();}
+    else msg='HTTP '+r.status+' —— 这个地址上没有后端接口。';
+  }catch(e){msg='请求发不出去：'+esc(String(e.message))+'。确认服务已启动、地址没写错。';}
+  if(box)box.innerHTML='<div class="alert '+cls+'"><i>'+(ok?'√':'!')+'</i><div>'+msg+'</div></div>';
+  return ok;
+}
 function markOffline(){
   const el=document.getElementById('netdot');
   if(el){el.className='netdot off';el.title=(API_MSG||'未连接后端')+'　'+netLabel();el.textContent='● 离线';}
@@ -568,7 +602,11 @@ function startPoll(){
     }catch(e){markOffline();}
   },12000);
 }
+function savedApi(){try{return localStorage.getItem('rd_api')||'';}catch(e){return '';}}
+function onStaticHost(){try{return /github\.io$|vercel\.app$|netlify\.app$|pages\.dev$/.test(location.hostname);}catch(e){return false;}}
 async function boot(){
+  /* 静态站上的前端，没填过后端地址就别去撞 /api 了 —— 直接进登录页说清楚 */
+  if(onStaticHost()&&!savedApi()){renderLogin('');return;}
   try{
     const st=await API.state();
     applyState(st);markOnline();
@@ -577,18 +615,29 @@ async function boot(){
     startPoll();
   }catch(e){
     if(e.needLogin)renderLogin('');
-    else renderOffline(e.message);
+    else renderOffline(e.message,e.html);
   }
 }
-function renderLogin(msg){
+function renderLogin(msg,msgHtml){
   const v=$('view');if(!v)return;
   const b=apiBase();
   /* https 页面调 http 接口会被浏览器直接拦掉（混合内容），提前说清楚比报错好排查 */
   const mixed=(location.protocol==='https:'&&/^http:\/\//.test(b));
+  /* 页面在静态站（Pages）上、又没填过后端地址 —— 这是最容易卡住的一步，直接写明白 */
+  let onStatic=false;
+  try{onStatic=/github\.io$|vercel\.app$|netlify\.app$|pages\.dev$/.test(location.hostname);}catch(e){}
+  const noApi=!b;
   v.innerHTML='<div class="card" style="max-width:430px;margin:44px auto"><div class="card-h">'
     +'<h3>研发端登录</h3><div class="sub">多人共用同一口令，用「姓名」区分是谁在操作；供应商扫码填报价不需要登录</div></div><div class="card-b">'
+    +((onStatic&&noApi)?'<div class="alert o"><i>!</i><div>这个页面本身<b>只是前端</b>（静态托管，跑不了后端）。'
+      +'要让数据真的存起来、二维码真的能收报价，必须在下面填<b>跑着 node server.js 的那台机器的地址</b>。</div></div>':'')
     +'<div class="fg"><label>后端地址（留空 = 与当前页面同源）</label>'
-    +'<input id="rdapi" value="'+esc(b)+'" placeholder="http://192.168.x.x:3000 或 https://xxx.cpolar.cn"></div>'
+    +'<input id="rdapi" value="'+esc(b)+'" placeholder="http://192.168.x.x:3000 或 https://xxx.cpolar.cn">'
+    +'<div style="margin-top:6px"><button class="btn sm" onclick="testApi()">测试这个地址能不能连上</button></div>'
+    +'<div id="apitest"></div>'
+    +'<div class="sm mut" style="margin-top:6px;line-height:1.7">只有自己用 → <span class="mono">http://localhost:3000</span>；'
+    +'同办公室同事一起用 → <span class="mono">http://192.168.x.x:3000</span>（在后端机器上跑 server.js，启动时会打印这个地址）；'
+    +'要发给外部供应商扫码 → 穿透或服务器给的 <span class="mono">https://域名</span>。</div></div>'
     +'<div class="fg"><label>你的姓名</label>'
     +'<input id="rdname" value="'+esc((ME&&ME.name)||'')+'" placeholder="会写进需求的提出人 / 操作留痕"></div>'
     +'<div class="fg"><label>你的电话</label>'
@@ -596,16 +645,16 @@ function renderLogin(msg){
     +'<div class="fg"><label>研发端口令</label>'
     +'<input id="rdpwd" type="password" placeholder="默认 rd2026" onkeydown="if(event.key===\'Enter\')doLogin()"></div>'
     +(mixed?'<div class="alert r"><i>!</i><div>当前页面是 <b>https</b>，后端填的却是 <b>http</b>，浏览器会拦截这种请求。请换 https 的穿透地址。</div></div>':'')
-    +(msg?'<div class="alert r"><i>!</i><div>'+esc(msg)+'</div></div>':'')
+    +((msgHtml||msg)?'<div class="alert r"><i>!</i><div>'+(typeof msgHtml==='string'?msgHtml:esc(msg))+'</div></div>':'')
     +'<button class="btn pri" onclick="doLogin()">登录</button>'
     +'<div class="sm mut" style="margin-top:8px">登录信息只存在这台电脑的浏览器里；改口令：启动服务前设环境变量 RD_ADMIN_PWD</div>'
     +'</div></div>';
 }
-function renderOffline(msg){
+function renderOffline(msg,msgHtml){
   const v=$('view');if(!v)return;
   v.innerHTML='<div class="card" style="max-width:520px;margin:44px auto"><div class="card-h">'
     +'<h3>连不上后端</h3></div><div class="card-b">'
-    +'<div class="alert r"><i>!</i><div>'+esc(msg||'未知错误')+'</div></div>'
+    +'<div class="alert r"><i>!</i><div>'+(typeof msgHtml==='string'?msgHtml:esc(msg||'未知错误'))+'</div></div>'
     +'<div class="sm" style="line-height:1.7">当前后端地址：<span class="mono">'+esc(netLabel())+'</span><br><br>请确认：<br>'
     +'1. 后端机器上执行过 <span class="mono">node server.js</span>（窗口别关）<br>'
     +'2. 地址填对：局域网用 <span class="mono">http://192.168.x.x:3000</span>，外网用穿透给的 <span class="mono">https://xxx</span><br>'
@@ -625,7 +674,7 @@ async function doLogin(){
     saveMe({name:name,phone:phone});
     await API.login(val('rdpwd'),name,phone);
     boot();
-  }catch(e){renderLogin(e.message||'登录失败');}
+  }catch(e){renderLogin(e.message||'登录失败',e.html);}
 }
 /* 二维码导出为 PNG 图片 —— 发微信 / 贴需求单都用它 */
 function downloadQr(){
