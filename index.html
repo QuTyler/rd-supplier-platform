@@ -405,33 +405,12 @@ const QR=(function(){
 })();
 
 /* ======================= 数据 ======================= */
-const SITE_DEFAULT='https://qutyler.github.io/rd-supplier-platform';   /* 线上站点（GitHub Pages）：本地双击打开时，二维码也指向它 */
+const SITE_DEFAULT='http://localhost:3000';   /* 后端地址兜底；页面由后端托管时自动取当前站点，见 siteBase() */
 const TODAY='2026-09-22';
 
-/* ---- 本机存档 ------------------------------------------------------------
-   没有服务器，但至少要保证：① 刷新页面数据不丢；② 同一台电脑/同一个浏览器里
-   供应商提交（或研发自己测试提交）的报价，研发端立刻能看到 —— 不必等回传码。
-   跨设备仍然靠回传链接把报价带回来。                                      */
-const DB_KEY='rd_db';
-const DB_VER=1;               /* 数据模型变了就 +1，旧存档自动作废（避免新字段读不到） */
-function saveDB(){
-  try{localStorage.setItem(DB_KEY,JSON.stringify(
-    {v:DB_VER,demands:DEMANDS,quotes:QUOTES,lib:LIB,suppliers:SUPPLIERS}));}catch(e){}
-}
-function loadDB(){
-  try{
-    const s=localStorage.getItem(DB_KEY);if(!s)return false;
-    const o=JSON.parse(s);
-    if(!o||o.v!==DB_VER||!o.demands||!o.demands.length)return false;
-    DEMANDS.length=0;o.demands.forEach(x=>DEMANDS.push(x));
-    QUOTES.length=0;(o.quotes||[]).forEach(x=>QUOTES.push(x));
-    LIB.length=0;(o.lib||[]).forEach(x=>LIB.push(x));
-    SUPPLIERS.length=0;(o.suppliers||[]).forEach(x=>SUPPLIERS.push(x));
-    return true;
-  }catch(e){return false;}
-}
-/* 演示数据被玩坏了时用：清掉存档，回到初始演示数据 */
-function resetDB(){try{localStorage.removeItem(DB_KEY);}catch(e){}location.reload();}
+/* 数据真源在后端（server/data.db）：存档层已移除，见下方「后端 API」段 */
+function resetDB(){try{localStorage.removeItem(DB_KEY);localStorage.removeItem('rd_token');}catch(e){}location.reload();}
+
 /* 记住上一次填的提出人，下次新建需求自动带出 */
 function ownerDefault(){try{return {name:localStorage.getItem('rd_owner')||'',
   phone:localStorage.getItem('rd_ownerPhone')||''};}catch(e){return {name:'',phone:''};}}
@@ -448,10 +427,238 @@ function isHttp(){return location.protocol==='http:'||location.protocol==='https
 function siteBase(){
   const s=lsGet('rd_site');
   if(s)return String(s).replace(/\/+$/,'');
+  try{const a=apiBase();if(a)return a;}catch(e){}
   if(isHttp())return location.origin+location.pathname.replace(/[^/]*$/,'').replace(/\/+$/,'');
   return SITE_DEFAULT;
 }
-function isPlaceholder(){return siteBase().indexOf('yourco.cn')>=0;}
+function isPlaceholder(){return /yourco\.cn|localhost|127\.0\.0\.1/.test(siteBase());}
+
+/* ======================= 后端 API ======================= */
+/* 数据真源在服务器（data.db）：启动拉全量，改动增量推回。
+   localStorage 只剩三样：登录口令 rd_token、扫码前缀 rd_site、上次填的提出人。 */
+let API_OFFLINE=false,API_MSG='';
+/* 当前使用人：多个研发共用同一口令，靠「姓名」区分谁建的、谁改的（不建账号，也不做权限隔离） */
+let ME=(function(){try{return JSON.parse(localStorage.getItem('rd_me')||'{}')||{};}catch(e){return {};}})();
+function saveMe(o){
+  ME=o||{};
+  try{
+    localStorage.setItem('rd_me',JSON.stringify(ME));
+    /* 同步给原型的「提出人」记忆：新建需求时自动带出登录人的姓名和电话 */
+    if(ME.name)localStorage.setItem('rd_owner',ME.name);
+    if(ME.phone)localStorage.setItem('rd_ownerPhone',ME.phone);
+  }catch(e){}
+}
+/* 后端地址：① 手填过就用手填的（前端在 GitHub Pages、后端在别处时必填）
+   ② 否则与页面同源（后端自己托管前端的情况）③ 双击打开的本地文件 → 兜底本机 */
+function apiBase(){
+  var s='';
+  try{s=localStorage.getItem('rd_api')||'';}catch(e){}
+  if(s)return String(s).replace(/\/+$/,'');
+  if(location.protocol==='http:'||location.protocol==='https:')return '';
+  return 'http://localhost:3000';
+}
+const API={
+  token:(function(){try{return localStorage.getItem('rd_token')||'';}catch(e){return '';}})(),
+  base:apiBase(),
+  url(p){return (this.base||'')+p;},
+  async req(p,opt){
+    opt=opt||{};
+    const h={'Content-Type':'application/json'};
+    if(this.token)h['x-rd-token']=this.token;
+    let r;
+    try{r=await fetch(this.url(p),Object.assign({headers:h},opt));}
+    catch(e){API_OFFLINE=true;throw new Error('连不上后端 '+(this.base||location.origin)
+      +' —— 确认服务已启动、地址填对，且 http/https 没有被浏览器拦截');}
+    if(r.status===401){
+      this.token='';try{localStorage.removeItem('rd_token');}catch(e){}
+      throw Object.assign(new Error('研发端口令不对或已失效'),{needLogin:true});
+    }
+    const raw=await r.text().catch(function(){return '';});
+    let j=null;try{j=JSON.parse(raw);}catch(e){j=null;}
+    if(!r.ok){
+      if(r.status===404&&/^\s*</.test(raw))
+        throw new Error('后端地址 '+netLabel()+' 上没有这个接口（返回了网页）。'
+          +'前端和后端不在同一个域名时，请在登录页填「后端地址」');
+      throw new Error((j&&j.error)||('HTTP '+r.status));
+    }
+    API_OFFLINE=false;return j||{};
+  },
+  get(p){return this.req(p);},
+  /* 所有写请求自动带上 operator —— 服务端据此记录「谁改的」 */
+  send(p,m,b){return this.req(p,{method:m,body:b?JSON.stringify(withOp(b)):undefined});},
+  async login(pwd,name,phone){
+    const j=await this.send('/api/login','POST',{pwd:pwd,name:name||'',phone:phone||''});
+    this.token=j.token;try{localStorage.setItem('rd_token',j.token);}catch(e){}
+    return j;
+  },
+  state(){return this.get('/api/state');}
+};
+function withOp(b){
+  if(!b||typeof b!=='object'||Array.isArray(b))return b;
+  if(!b.operator&&ME&&ME.name)b.operator={name:ME.name,phone:ME.phone||''};
+  return b;
+}
+/* ---- 增量同步：只把本地改过的记录推回服务器 ---- */
+const TABLE_API={demands:'/api/demand',suppliers:'/api/supplier',quotes:'/api/quote',lib:'/api/lib'};
+let SNAP={demands:{},suppliers:{},quotes:{},lib:{}};
+function snapKey(o){return o.id||o.sid;}
+const TABLE_LIST={demands:function(){return DEMANDS;},suppliers:function(){return SUPPLIERS;},
+  quotes:function(){return QUOTES;},lib:function(){return LIB;}};
+function buildSnap(){
+  const s={};
+  Object.keys(TABLE_API).forEach(function(t){
+    const m={};TABLE_LIST[t]().forEach(function(o){const k=snapKey(o);if(k)m[k]=JSON.stringify(o);});
+    s[t]=m;
+  });
+  SNAP=s;
+}
+function saveDB(){
+  if(!API.token)return;                     /* 还没登录就别发 */
+  const cur={demands:DEMANDS,suppliers:SUPPLIERS,quotes:QUOTES,lib:LIB};
+  Object.keys(TABLE_API).forEach(function(t){
+    const now={},old=SNAP[t]||{};
+    cur[t].forEach(function(o){
+      const k=snapKey(o);if(!k)return;
+      now[k]=JSON.stringify(o);
+      if(old[k]!==now[k]){
+        API.send(TABLE_API[t],'PUT',{obj:o}).catch(function(e){
+          API_MSG=String(e.message);markOffline();
+        });
+      }
+    });
+    Object.keys(old).forEach(function(k){
+      if(!now[k])API.send(TABLE_API[t]+'/'+encodeURIComponent(k),'DELETE').catch(function(){});
+    });
+    SNAP[t]=now;
+  });
+}
+function loadDB(){return false;}            /* 兼容旧调用点：数据一律从后端取 */
+function netLabel(){return API.base||(isHttp()?location.origin:'(本机)');}
+function markOffline(){
+  const el=document.getElementById('netdot');
+  if(el){el.className='netdot off';el.title=(API_MSG||'未连接后端')+'　'+netLabel();el.textContent='● 离线';}
+  const nm=document.getElementById('mename');if(nm)nm.textContent='';
+}
+function markOnline(){
+  const el=document.getElementById('netdot');
+  if(el){el.className='netdot';el.title='已连接后端 '+netLabel();el.textContent='● 已连接后端';}
+  const nm=document.getElementById('mename');
+  if(nm)nm.textContent=(ME&&ME.name)?('　·　'+ME.name):'';
+}
+/* ---- 启动：拉全量 → 渲染 ---- */
+function applyState(st){
+  DEMANDS=st.demands||[];SUPPLIERS=st.suppliers||[];QUOTES=st.quotes||[];LIB=st.lib||[];
+  buildSnap();
+  if(!DEMANDS.some(function(d){return d.id===curDemand;}))curDemand=DEMANDS.length?DEMANDS[0].id:'';
+}
+let POLL=null;
+function startPoll(){
+  if(POLL)return;
+  POLL=setInterval(async function(){
+    if(curPage==='form')return;             /* 别打断正在填的需求单 */
+    try{
+      const st=await API.state();
+      const sig=function(x){return (x.quotes||[]).length+'/'+(x.demands||[]).length+'/'+(x.lib||[]).length
+        +'/'+(x.suppliers||[]).length;};
+      if(sig(st)!==sig({quotes:QUOTES,demands:DEMANDS,lib:LIB,suppliers:SUPPLIERS})){
+        applyState(st);go(curPage);
+        setFlash('b','已从后端同步最新数据（可能是供应商刚提交的报价）。');
+      }
+      markOnline();
+    }catch(e){markOffline();}
+  },12000);
+}
+async function boot(){
+  try{
+    const st=await API.state();
+    applyState(st);markOnline();
+    if(UP&&UP.p==='inbox'){enterInbox(UP.q);}   /* 兼容旧回传链接 */
+    else go('list');
+    startPoll();
+  }catch(e){
+    if(e.needLogin)renderLogin('');
+    else renderOffline(e.message);
+  }
+}
+function renderLogin(msg){
+  const v=$('view');if(!v)return;
+  const b=apiBase();
+  /* https 页面调 http 接口会被浏览器直接拦掉（混合内容），提前说清楚比报错好排查 */
+  const mixed=(location.protocol==='https:'&&/^http:\/\//.test(b));
+  v.innerHTML='<div class="card" style="max-width:430px;margin:44px auto"><div class="card-h">'
+    +'<h3>研发端登录</h3><div class="sub">多人共用同一口令，用「姓名」区分是谁在操作；供应商扫码填报价不需要登录</div></div><div class="card-b">'
+    +'<div class="fg"><label>后端地址（留空 = 与当前页面同源）</label>'
+    +'<input id="rdapi" value="'+esc(b)+'" placeholder="http://192.168.x.x:3000 或 https://xxx.cpolar.cn"></div>'
+    +'<div class="fg"><label>你的姓名</label>'
+    +'<input id="rdname" value="'+esc((ME&&ME.name)||'')+'" placeholder="会写进需求的提出人 / 操作留痕"></div>'
+    +'<div class="fg"><label>你的电话</label>'
+    +'<input id="rdphone" value="'+esc((ME&&ME.phone)||'')+'" placeholder="新建需求时自动带到提出人电话"></div>'
+    +'<div class="fg"><label>研发端口令</label>'
+    +'<input id="rdpwd" type="password" placeholder="默认 rd2026" onkeydown="if(event.key===\'Enter\')doLogin()"></div>'
+    +(mixed?'<div class="alert r"><i>!</i><div>当前页面是 <b>https</b>，后端填的却是 <b>http</b>，浏览器会拦截这种请求。请换 https 的穿透地址。</div></div>':'')
+    +(msg?'<div class="alert r"><i>!</i><div>'+esc(msg)+'</div></div>':'')
+    +'<button class="btn pri" onclick="doLogin()">登录</button>'
+    +'<div class="sm mut" style="margin-top:8px">登录信息只存在这台电脑的浏览器里；改口令：启动服务前设环境变量 RD_ADMIN_PWD</div>'
+    +'</div></div>';
+}
+function renderOffline(msg){
+  const v=$('view');if(!v)return;
+  v.innerHTML='<div class="card" style="max-width:520px;margin:44px auto"><div class="card-h">'
+    +'<h3>连不上后端</h3></div><div class="card-b">'
+    +'<div class="alert r"><i>!</i><div>'+esc(msg||'未知错误')+'</div></div>'
+    +'<div class="sm" style="line-height:1.7">当前后端地址：<span class="mono">'+esc(netLabel())+'</span><br><br>请确认：<br>'
+    +'1. 后端机器上执行过 <span class="mono">node server.js</span>（窗口别关）<br>'
+    +'2. 地址填对：局域网用 <span class="mono">http://192.168.x.x:3000</span>，外网用穿透给的 <span class="mono">https://xxx</span><br>'
+    +'3. <b>https 的页面必须配 https 的后端</b>，http 会被浏览器拦掉<br>'
+    +'4. 供应商扫码提交失败，多半是服务器当时没开</div>'
+    +'<div style="margin-top:10px"><button class="btn pri" onclick="renderLogin(\'\')">改后端地址 / 重新登录</button> '
+    +'<button class="btn" onclick="location.reload()">重试</button></div>'
+    +'</div></div>';
+  markOffline();
+}
+async function doLogin(){
+  const val=function(id){const e=$(id);return e?String(e.value||'').trim():'';};
+  const base=val('rdapi').replace(/\/+$/,'');
+  const name=val('rdname'),phone=val('rdphone');
+  try{
+    if(base!==API.base){try{localStorage.setItem('rd_api',base);}catch(e){}API.base=base;}
+    saveMe({name:name,phone:phone});
+    await API.login(val('rdpwd'),name,phone);
+    boot();
+  }catch(e){renderLogin(e.message||'登录失败');}
+}
+/* 二维码导出为 PNG 图片 —— 发微信 / 贴需求单都用它 */
+function downloadQr(){
+  const d=DM(curDemand);if(!d){setFlash('r','请先选择一个需求');return;}
+  const url=qrUrl(d);
+  let svg;
+  try{svg=QR.svg(url,8);}catch(e){setFlash('r','二维码生成失败：'+e.message);return;}
+  svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"');
+  const blob=new Blob([svg],{type:'image/svg+xml'});
+  const u=URL.createObjectURL(blob);
+  const img=new Image();
+  img.onload=function(){
+    const cv=document.createElement('canvas');cv.width=600;cv.height=672;
+    const g=cv.getContext('2d');
+    g.fillStyle='#fff';g.fillRect(0,0,600,672);
+    g.drawImage(img,0,0,600,600);
+    g.textAlign='center';
+    g.fillStyle='#0f172a';g.font='bold 24px "Microsoft YaHei",sans-serif';
+    g.fillText(String(d.title||'').slice(0,20),300,634);
+    g.fillStyle='#64748b';g.font='17px "Microsoft YaHei",sans-serif';
+    g.fillText(d.id+'  微信扫一扫填报价',300,660);
+    const a=document.createElement('a');
+    a.href=cv.toDataURL('image/png');
+    a.download='询价单_'+d.id+'.png';
+    document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(u);
+    setFlash('g','二维码图片已下载 —— 微信里直接发图片，对方长按识别即可。');
+    go(curPage);
+  };
+  img.onerror=function(){setFlash('r','图片生成失败，请改用「复制」把链接发到微信。');};
+  img.src=u;
+}
+
 /* ---- 需求「随链接走」----------------------------------------------------
    原型没有后端：研发在自己电脑上新建的需求，手机端是取不到的，
    所以把需求内容压进二维码链接（?x=…）。手机扫码时用链接里的数据渲染，
@@ -556,15 +763,21 @@ function unpackDemand(x){
    再密就靠「导出询价页 HTML」兜底。 */
 const PACK_MAXVER=22;
 /* 返回 {url, lv}：lv=0 完整 / 1 精简 / 2 极简 / -1 装不下（只带需求号） */
-function qrUrlOf(d){
-  const f=isHttp()?('/'+(location.pathname.split('/').pop()||'')):'/';
-  const short=siteBase()+f+'?p=s1&d='+encodeURIComponent(d.id);
-  for(let lv=0;lv<PACK_CFG.length;lv++){
-    const u=short+'&x='+packDemand(d,lv);
-    if(!QR.fits(u))continue;
-    try{if(QR.encode(u).ver<=PACK_MAXVER)return {url:u,lv:lv};}catch(e){}
+/* 有后端了：二维码里只放「需求号 + 令牌」，内容由供应商手机打开时从服务器取。
+   链接短 → 二维码版本 v2~v3 → 任何手机都能秒扫，需求写得再长也不影响。 */
+function tokenOf(d){
+  if(!d.token){
+    d.token=Math.random().toString(36).slice(2,8)+Math.random().toString(36).slice(2,6);
+    if(window.API&&API.send)API.send('/api/demand','PUT',{obj:d}).catch(function(){});
   }
-  return {url:short,lv:-1};
+  return d.token;
+}
+function qrUrlOf(d){
+  const base=siteBase().replace(/\/+$/,'');
+  const url=base+'/s.html?d='+encodeURIComponent(d.id)+'&t='+encodeURIComponent(tokenOf(d));
+  let ver=null;
+  try{ver=QR.encode(url).ver;}catch(e){}
+  return {url:url,lv:0,ver:ver};
 }
 function qrUrl(d){return qrUrlOf(d).url;}
 /* 本机自测链接：file:// 也能直接打开，用来验证扫码页长什么样 */
@@ -595,49 +808,7 @@ function enterScan(did,x){
 const CERT_LABEL={'NDA':'需签 NDA','认证':'需体系/行业认证','不外协':'关键工序不得外协','试机':'需带料试机'};
 const CERT_KEYS=['NDA','认证','不外协','试机'];
 
-const SUPPLIERS=[
- {id:'S001',name:'苏州恒锐智能装备',city:'江苏 苏州',contact:'王经理',phone:'138-1234-5678',
-  maxSize:'6000×3000×2500',acc:0.02,cycle:2,priceMin:30,priceMax:200,unit:'整机',
-  sample:true,minAmount:20,moq:1,leadDays:120,certs:['NDA','认证','不外协','试机'],
-  cases:['2025 为某 3C 客户做六工位转盘装配机，节拍 4s/件，一次验收通过',
-         '2024 汽车零部件检测专机 3 台，交付准时'],
-  note:'沟通顺畅，图纸规范。工程师 8 人，装配面积 1200㎡。'},
- {id:'S002',name:'上海迈新自动化',city:'上海 松江',contact:'李工',phone:'139-8765-4321',
-  maxSize:'8000×4000×3500',acc:0.05,cycle:3,priceMin:80,priceMax:400,unit:'整机',
-  sample:true,minAmount:50,moq:1,leadDays:140,certs:['NDA','认证','试机'],
-  cases:['新能源电池模组装配线 2 条','医疗耗材包装机'],
-  note:'规模大但排产满，小单优先级低。'},
- {id:'S003',name:'无锡精工机械',city:'江苏 无锡',contact:'陈经理',phone:'137-2345-6789',
-  maxSize:'4000×2500×2500',acc:0.05,cycle:2,priceMin:20,priceMax:120,unit:'整机',
-  sample:true,minAmount:10,moq:1,leadDays:75,certs:['NDA','试机'],
-  cases:['小型压装专机多台','输送单元集成'],
-  note:'价格有优势，装配面积 600㎡，4 吨以上设备偏勉强。'},
- {id:'S004',name:'宁波中大力德模组',city:'浙江 宁波',contact:'周经理',phone:'135-3456-7890',
-  maxSize:'2000×400×300',acc:0.01,cycle:0,priceMin:0.05,priceMax:3,unit:'单件',
-  sample:true,minAmount:0,moq:5,leadDays:20,certs:['NDA'],
-  cases:['直线模组批量供货','KK 模组系列'],
-  note:'标准品为主，定制能力弱。'},
- {id:'S005',name:'苏州锐进精密机械',city:'江苏 苏州',contact:'吴工',phone:'136-4567-8901',
-  maxSize:'1500×1000×800',acc:0.005,cycle:0,priceMin:0.02,priceMax:0.8,unit:'单件',
-  sample:true,minAmount:0,moq:1,leadDays:25,certs:['NDA','认证'],
-  cases:['精密治具','检具'],
-  note:'小件精度好，做不了整机。'},
- {id:'S006',name:'南通重型装备制造',city:'江苏 南通',contact:'赵总',phone:'158-5678-9012',
-  maxSize:'25000×8000×6000',acc:0.5,cycle:0,priceMin:150,priceMax:900,unit:'整机',
-  sample:false,minAmount:100,moq:1,leadDays:180,certs:['认证'],
-  cases:['大型输送线','港口设备结构件'],
-  note:'不接研发打样，最小项目 100 万。'},
- {id:'S007',name:'深圳速造钣金',city:'广东 深圳',contact:'孙经理',phone:'159-6789-0123',
-  maxSize:'3000×1500×1000',acc:0.1,cycle:0,priceMin:0.01,priceMax:2,unit:'单件',
-  sample:true,minAmount:0,moq:10,leadDays:15,certs:[],
-  cases:['机箱机柜','钣金结构件批量'],
-  note:'远，且只做钣金。'},
- {id:'S008',name:'常州联创机电',city:'江苏 常州',contact:'钱工',phone:'150-7890-1234',
-  maxSize:'5000×3000×2500',acc:null,cycle:4,priceMin:40,priceMax:180,unit:'整机',
-  sample:true,minAmount:30,moq:1,leadDays:110,certs:['NDA','试机'],
-  cases:['绕线机','点胶机'],
-  note:'典型精度未核实 —— 需补录后重判。'}
-];
+let SUPPLIERS=[];              /* 由后端 /api/state 下发 */
 
 /* 设备主要构件清单：需求方填名称/规格/数量，单价与小计由供应商扫码填写 */
 const ITEMS={
@@ -665,29 +836,7 @@ const ITEMS={
   {name:'快换夹具',spec:'按来料定制，2 套互换',unit:'套',qty:2,remark:''}
  ]
 };
-const DEMANDS=[
- {id:'D-2026-014',title:'六工位转盘式装配机（研发样机）',owner:'张工',ownerPhone:'138-0000-0000',
-  desc:'3C 小件自动上料→压装→锁付→检测→下料，用于 A3 项目首台样机验证',
-  size:'3500×2500×2200',acc:0.05,cycle:4,qty:1,delivery:'2027-01-15',
-  place:'苏州',certs:['NDA','试机'],
-  deadline:'2026-09-28 17:00',acceptance:'连续运行 72h 无故障；节拍达标；良率≥99.5%',
-  drawings:['装配机总图_v3.pdf','工位布局图.dwg'],note:'方案已定稿，图纸可签 NDA 后提供',
-  items:ITEMS['D-2026-014'],status:'询价中',closed:false},
- {id:'D-2026-021',title:'直线模组 20 套（含滑块）',owner:'张工',ownerPhone:'138-0000-0000',
-  desc:'A3 项目 XYZ 平台用，行程 800mm，配伺服',
-  size:'950×120×90',acc:0.02,cycle:0,qty:20,delivery:'2026-11-20',
-  place:'苏州',certs:['NDA'],
-  deadline:'2026-09-26 17:00',acceptance:'到货全检尺寸，提供材质与检测报告',
-  drawings:['模组规格书.pdf'],note:'整批 20 套，按套报价',
-  items:ITEMS['D-2026-021'],status:'询价中',closed:false},
- {id:'D-2026-022',title:'柔性上料单元方案摸底',owner:'李工',ownerPhone:'139-0000-1111',
-  desc:'方案未定，先摸底：谁做过、大致多少钱、愿不愿参与',
-  size:'1200×1000×1500',acc:0.1,cycle:6,qty:1,delivery:'2027-03-30',
-  place:'苏州',certs:[],
-  deadline:'2026-10-10 17:00',acceptance:'',drawings:[],
-  note:'概念阶段，暂无定稿图纸，仅文字描述',items:ITEMS['D-2026-022'],
-  status:'草稿',closed:false}
-];
+let DEMANDS=[];
 /* 按需求构件生成报价明细：只存单价，小计 = 单价 × 需求里的数量。
    注意：此处只能用 DEMANDS 直接查找 —— DM 是 const 箭头函数，初始化阶段调用会触发 TDZ。 */
 function mkItems(did,prices){
@@ -697,38 +846,7 @@ function mkItems(did,prices){
   });
 }
 
-const QUOTES=[
- {id:'Q001',did:'D-2026-014',company:'苏州恒锐智能装备',contact:'王经理',phone:'13812345678',
-  items:mkItems('D-2026-014',[68000,32000,45000,38000,56000,42000,52000,26000,38000]),
-  total:480000,taxIncluded:true,taxRate:13,freightIncluded:true,freight:0,
-  installIncluded:true,installFee:0,designIncluded:true,designFee:0,trialIncluded:true,trialFee:0,
-  leadDays:130,warranty:12,validDays:30,deviation:'无',note:'含现场安装调试与培训',
-  status:'已确认',at:'2026-09-18 10:22'},
- {id:'Q002',did:'D-2026-014',company:'上海迈新自动化',contact:'李工',phone:'13987654321',
-  items:mkItems('D-2026-014',[66000,28000,43000,34000,38000,38000,52000,24000,20000]),
-  total:420000,taxIncluded:false,taxRate:13,freightIncluded:true,freight:0,
-  installIncluded:false,installFee:28000,designIncluded:false,designFee:45000,trialIncluded:true,trialFee:0,
-  leadDays:150,warranty:12,validDays:30,deviation:'检测工位由 6 项减为 4 项',note:'',
-  status:'已确认',at:'2026-09-18 15:40'},
- {id:'Q003',did:'D-2026-014',company:'无锡精工机械',contact:'陈经理',phone:'13723456789',
-  items:mkItems('D-2026-014',[62000,26000,38000,30000,42000,40000,49000,0,22000]),
-  total:377000,taxIncluded:true,taxRate:13,freightIncluded:false,freight:6000,
-  installIncluded:false,installFee:18000,designIncluded:true,designFee:0,trialIncluded:false,trialFee:12000,
-  leadDays:75,warranty:12,validDays:20,deviation:'防护罩改为选配，不在本次范围',note:'',
-  status:'已确认',at:'2026-09-19 09:05'},
- {id:'Q004',did:'D-2026-014',company:'常州联创机电',contact:'钱工',phone:'15078901234',
-  items:mkItems('D-2026-014',[70000,30000,42000,36000,56000,40000,48000,25000,20000]),
-  total:445000,taxIncluded:true,taxRate:13,freightIncluded:true,freight:0,
-  installIncluded:true,installFee:0,designIncluded:true,designFee:0,trialIncluded:true,trialFee:0,
-  leadDays:110,warranty:18,validDays:30,deviation:'无',note:'',
-  status:'已确认',at:'2026-09-19 14:18'},
- {id:'Q005',did:'D-2026-014',company:'苏州某某自动化（陌生厂）',contact:'刘经理',phone:'18600001111',
-  items:mkItems('D-2026-014',[52000,22000,32000,28000,42000,40000,43000,18000,15000]),
-  total:352000,taxIncluded:true,taxRate:13,freightIncluded:true,freight:0,
-  installIncluded:true,installFee:0,designIncluded:true,designFee:0,trialIncluded:true,trialFee:0,
-  leadDays:60,warranty:12,validDays:15,deviation:'无',note:'',
-  status:'待核实',at:'2026-09-20 08:33'}
-];
+let QUOTES=[];
 
 let curDemand='D-2026-014';
 let editingId=null;      /* 正在编辑的需求 id，null=新建 */
@@ -883,6 +1001,18 @@ function go(p){
   window.scrollTo(0,0);
 }
 function refreshBadges(){
+  const nd=$('netdot');if(!nd){
+    const nav=$('nav')||document.body;
+    const s=document.createElement('div');
+    s.id='netdot';s.className='netdot';s.textContent='● 已连接后端';
+    s.style.cssText='font-size:11.5px;color:var(--ok);padding:8px 12px';
+    const m=document.createElement('span');
+    m.id='mename';m.style.cssText='color:var(--mut)';
+    s.appendChild(m);
+    if(nav.parentNode)nav.parentNode.insertBefore(s,nav);
+  }
+  const mn=$('mename');
+  if(mn)mn.textContent=(typeof ME!=='undefined'&&ME&&ME.name)?('　·　'+ME.name):'';
   $('bgList').textContent=DEMANDS.length;
   $('bgQuote').textContent=QUOTES.filter(q=>q.status==='待核实').length;
   if($('bgSup'))$('bgSup').textContent=SUPPLIERS.length;
@@ -925,7 +1055,7 @@ function rList(){
       <td><div class="b">${esc(d.title)}</div>
         <div class="sm mut">${esc(d.desc).slice(0,40)}${esc(d.desc).length>40?'…':''} · ${esc(d.place)}
         · <span style="color:var(--tx2)">构件 ${(d.items||[]).length} 项</span>
-        ${d.owner?'<br>提出人 <b>'+esc(d.owner)+'</b>'+(d.ownerPhone?' · '+esc(d.ownerPhone):''):''}</div></td>
+        ${d.owner?'<br>提出人 <b>'+esc(d.owner)+'</b>'+(d.ownerPhone?' · '+esc(d.ownerPhone):''):''+(d.updated_by&&d.updated_by!==d.owner?'<br><span class="sm mut">最后由 '+esc(d.updated_by)+' 修改</span>':'')}</div></td>
       <td class="num">${d.qty}</td>
       <td class="sm">${d.delivery}<div class="mut">剩 ${daysLeft(d.delivery)} 天</div></td>
       <td class="sm">${esc(d.deadline)}<div class="mut ${left<3?'':''}">${left>=0?'剩 '+left+' 天':'已截止'}</div></td>
@@ -1107,6 +1237,7 @@ function saveDemand(draft){
     items:items
   });
   const oldItems=(old&&old.items)?JSON.parse(JSON.stringify(old.items)):[];
+  tokenOf(d);                               /* 扫码令牌：没有就现发一个 */
   if(!old){d.id=nextId();DEMANDS.unshift(d);}
   else{const i=DEMANDS.indexOf(old);DEMANDS[i]=d;}
   /* 构件清单变了 → 已收报价按构件名称重新对齐，新增项留空待补 */
@@ -1210,16 +1341,11 @@ function rInvite(){
   try{ const r=QR.encode(url); qr=QR.svg(url); qrVer=r.ver; }   /* 不传 scale：按版本自适应尺寸 */
   catch(e){ qr='<div style="width:180px;height:180px;display:flex;align-items:center;justify-content:center;'
     +'border:1px dashed var(--bd);color:var(--mut);font-size:12px">'+esc(e.message)+'</div>'; }
-  const packTip=packed
-    ? '<b style="color:var(--ok)">✓ 链接自带需求数据</b>（'+packedBytes+' 字节 / 二维码 v'+qrVer
-      +(qrInfo.lv>0?'，已自动压缩为'+(qrInfo.lv===1?'精简':'极简')+'摘要':'')
-      +'）：手机扫码后<b>不依赖服务器</b>，直接显示构件报价表。'
-      +(qrInfo.lv>0?'<br>压缩只影响摘要文字长度，<b>构件项数与数量不丢</b>；'
-        +'如需完整规格说明，请用下方「导出询价页 HTML」。':'')
-    : '<b style="color:var(--wn)">⚠ 需求内容超出可扫范围（二维码需 ≤ v'+PACK_MAXVER
-      +'）</b>，本码只带需求号，手机端会取不到需求内容。'
-      +'<br>请用下方 <b>「导出询价页 HTML」</b>：把导出的页面放到任意静态空间（或微信直接发文件），'
-      +'供应商打开就能看到完整报价表。';
+  const packTip='<b style="color:var(--ok)">✓ 链接只有需求号 + 令牌</b>（'+url.length+' 字节 / 二维码 v'+qrVer
+      +'）：需求内容存在服务器上，手机扫码时实时取，<b>需求写得再长都不影响扫码</b>。'
+      +'供应商提交后直接入库，你在「询价比价」刷新即可看到 —— 不需要回传码。'
+      +(isPlaceholder()?'<br><b style="color:var(--wn)">注意：当前前缀是本机/占位地址，供应商手机打不开。'
+        +'把内网服务器地址或穿透后的公网地址填到下面「扫码链接前缀」。</b>':'');
   const closed=daysLeft(d.deadline.slice(0,10))<0||d.closed;
   return flashHtml()+`
   <div class="stepdot">
@@ -1252,10 +1378,12 @@ function rInvite(){
         <div class="alert ${packed?'g':'o'}" style="margin-top:9px;text-align:left;font-size:11.5px;padding:8px 10px">
           <i>${packed?'✓':'!'}</i><div>${packTip}</div></div>
         <div style="margin-top:9px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+          <button class="btn sm pri" onclick="downloadQr()">下载二维码图片</button>
           <button class="btn sm" onclick="openScan()">本机打开扫码页</button>
-          <button class="btn sm" onclick="go('s1')">页内预览</button>
-          <button class="btn sm pri" onclick="exportInviteHtml()">导出询价页 HTML</button>
+          <button class="btn sm" onclick="exportInviteHtml()">导出询价页 HTML</button>
         </div>
+        <div class="sm mut" style="margin-top:6px;text-align:center">
+          转发微信：点「下载二维码图片」拿到 PNG，微信里发图片 / 长按识别即可</div>
       </div>
       <div style="flex:1;min-width:300px">
         <h4 style="font-size:13px;margin-bottom:8px">扫码页展示的需求摘要（文字版）</h4>
@@ -1593,23 +1721,7 @@ const GRADE_META={'推荐':['g','ml-g','mc-g','能力边界满足，且接单意
 const LIB_GRADES=['推荐','可联系'];
 const LIB_STATUS=['待联系','已联系','已报价','已合作','已淘汰'];
 const LIB_STAG={'待联系':'gr','已联系':'b','已报价':'o','已合作':'g','已淘汰':'r'};
-const LIB=[
- {sid:'S001',owner:'张工',status:'已报价',touchAt:'2026-09-20',tags:['整机能力强','可带料试机'],
-  froms:[{did:'D-2026-014',grade:'可联系',at:'2026-09-15'},
-         {did:'D-2026-022',grade:'推荐',at:'2026-09-17'}],
-  notes:[{at:'2026-09-16',txt:'电话沟通，愿意做整机，排产需提前锁定'},
-         {at:'2026-09-20',txt:'报价已到，口径全含，无需折算'},
-         {at:'2026-09-21',txt:'待确认交期能否从 130 天压到 100 天'}]},
- {sid:'S002',owner:'张工',status:'已报价',touchAt:'2026-09-19',tags:['规模大','排产满'],
-  froms:[{did:'D-2026-014',grade:'可联系',at:'2026-09-15'}],
-  notes:[{at:'2026-09-18',txt:'李工反馈排产紧张，最早 11 月才能启动'}]},
- {sid:'S003',owner:'张工',status:'已联系',touchAt:'2026-09-19',tags:['价格低'],
-  froms:[{did:'D-2026-014',grade:'推荐',at:'2026-09-15'}],
-  notes:[{at:'2026-09-19',txt:'价格有优势，但报价未含防护罩与安装，需补报'}]},
- {sid:'S004',owner:'张工',status:'待联系',touchAt:'2026-09-17',tags:['标准品/模组'],
-  froms:[{did:'D-2026-021',grade:'推荐',at:'2026-09-17'}],
-  notes:[{at:'2026-09-17',txt:'直线模组需求（D-2026-021）筛出来的；只做标准品，定制能力弱'}]}
-];
+let LIB=[];               /* 由后端 /api/state 下发 */
 
 /* ---- 供应商库：数据操作 ---- */
 const libOf=sid=>LIB.filter(x=>x.sid===sid)[0];
@@ -2583,10 +2695,7 @@ document.querySelectorAll('#nav a').forEach(a=>{a.onclick=()=>go(a.dataset.p);})
 /* 二维码扫出来的链接形如 …?p=s1&d=D-2026-014&x=… → 直接进入供应商扫码视图
    带 x 时用链接自带的需求数据渲染（原型无后端，手机端取不到研发本地数据） */
 const UP=urlParams();
-loadDB();                                   /* 先读本机存档，再决定进哪个页面 */
-if(UP.p==='inbox')enterInbox(UP.q);         /* 供应商发回的回传链接：点开即入库 */
-else if(UP.p==='s1'||UP.p==='scan')enterScan(UP.d,UP.x);
-else go('list');
+boot();                                     /* 数据从后端拉，拉到再渲染 */
 </script>
 </body>
 </html>
